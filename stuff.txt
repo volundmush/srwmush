@@ -1,0 +1,17 @@
+
+&CMD`KILLFEED [u(cobj,pglob)]=$+killfeed:&D`KILLTOGGLE %#=setr(res,not(default(%#/D`KILLTOGGLE,1)));@attach %!/INC`MSG=Killfeed [if(%q<res>,enabled,disabled)]!
+
+&CMD`+WIKI [u(cobj,pglob)]=$+wiki *:@attach %!/INC`CHECKPC=u(strfirstof,%0,%#),1;@pemit %#=u(header,Wiki Code for %q<t1name>);@pemit %#=\{\{Character%R|NameOnMUSH=%q<t1name>%R|ID=%q<t1id>%R|Img=-%R|FullName=%q<t1name>[if(strlen(u(setr,alias,get(%q<t1>/D`FINGER`ALIASES))),%R|Alias=%q<alias>)]%R|Gender=[get(%q<t1>/SEX)]%R|Species=[get(%q<t1>/D`FINGER`RACE)][if(strlen(u(setr,power,get(%q<t1>/D`FINGER`TEMPLATE))),%R|Power=%q<power>)]%R|Theme=[u(getproperty,%q<t1>,THEME)]%R|Chartype=[get(%q<t1>/D`FINGER`TYPE)]%R|Status=Alive[if(strlen(u(setr,facname,u(getproperty,%q<t1>,FACTION))),%R|Faction=%q<facname>%R|RankNumber=[before(u(setr,rank,u(getproperty,%q<t1>,RANK,,1)),-)]%R|RankName=[after(%q<rank>,-)])][if(strlen(u(setr,groups,iter(setunion(edit(u(getproperty,%q<t1>,GROUPS,1),%R,|),iter(u(getproperty,%q<t1>,MAJORDBS),iter(lattr(%q<t1>/D`GROUP`%i0`DIVISION`*),get(%i1/DIVISION`[last(%i0,`)]),%b,|),%b,|),|,|),%i0,|,\,%b))),%R|Groups=%q<groups>)]%R|Quote=[get(%q<t1>/D`FINGER`QUOTE)]%R|Song=-%R|Profile=[get(%q<t1>/D`FINGER`PROFILE)][if(strlen(u(setr,main,get(%q<t1>/D`FINGER`PRIMARY))),%R|MainUnit=%q<main>)][if(strlen(u(setr,second,get(%q<t1>/D`FINGER`SECONDARY))),%R|SecondaryUnit=%q<second>)]%R|Skills=[get(%q<t1>/D`FINGER`SKILLS)]%R\}\}%R%R[u(weblink,http://www.srwmush.com/index.php/[edit(%q<t1name>,%b,_)])];@pemit %#=u(footer)
+
+&CMD`XWHO [u(cobj,pglob)]=$xwho:th setq(c,u(color,%#,border));@pemit %#=header(%qc,,Faction Who);th setq(facs,setunion(iter(u(lwhoid,%#),u(setr,facname,stripansi(strfirstof(if(isdbref(u(setr,facd,u(getproperty,%i0,TIERDB,2,1))),name(%q<facd>)),Other)))[u(setq,edit(%q<facname>,%b,_)-list,setunion(r(edit(%q<facname>,%b,_)-list),%i0))][if(r(edit(%q<facname>,%b,_)-color),,u(setq,edit(%q<facname>,%b,_)-color,if(u(setr,facdb,u(getproperty,%i0,TIERDB,2,1)),u(%q<facdb>/GET`COLOR),n)))],%b,|),,|,|));@dolist/inline/delimit | %q<facs>={@pemit %#=align(1. 14 56,,ansi(r(edit(%i0,%b,_)-color),%i0),itemize(iter(u(sortname,r(edit(%i0,%b,_)-list)),cond(gte(idle(%i0),3600),ansi(244,name(%i0)),u(isic,%i0),ansi(+khaki3,name(%i0)),name(%i0)),%b,|),|,&,\,))};@pemit %#=[center(ansi(%qc,repeat(-,60)),80)]%r[center([time()] - Characters [ansi(+khaki3,IC)]\, OOC\, [ansi(244,>1h idle)],80)]%r[footer(%qc,,time() - [ansi(+khaki3,Characters IC)])]
+
+@dolist/inline lsearch(all,type,player,elock,!SEX:?*)={@sex %i0=if(regmatchi(get(%i0/D`FINGER`PROFILE),\\b(her|she)\\b),Female,Male)}
+
++who/config header=Name~22|Alias~9|F~1|Idle~>4| ~1|Conn~<4|Location~>31
++who/config columns=NAMELINK/+finger^^^+join~22|ALIAS~9|FACLETTER/2~1|HIDEIDLE~>4|SLASH~1|HIDECONN~<4|LOCATION/1~>31
+&GETPROPERTY`SLASH [u(cobj,ccp)]=/
+
+
+&CMD`SILLY [u(cobj,sglob)]=$+silly *=*:th if(setr(0,pmatch(*%0)),if(hasattrval(%vz,tr`%1),[if(match(%q0,%#),,u(%vz/kill`message,%q0,%1,[filter(%!/fn`killcheck,setunion(lwho(),))]))][u(%vz/tr`%1,%q0)],pemit(%#,GAME: There is no silly command named %1.)),pemit(%#,GAME: %0 not found.))
+&FN`KILLCHECK [u(cobj,sglob)]=default(%0/D`KILLTOGGLE,1)
+&VZ [u(cobj,sglob)]=#721

@@ -1,0 +1,7 @@
+
+&PLAYERS`SRW #344=setq(players,sort(lvplayers(%!),name))[center(vol_separator(Players,,,,76),80)]%r[align(1. 76 1.,,table(iter(sortkey(#lambda/strfirstof(vol_getproperty(\%0,FACLETTER,2),?),%q<players>,a),ljust(click(look %i0,left(vol_getproperty(%i0,BANNER,2),30))%B\[[strfirstof(vol_getproperty(%i0,FACLETTER,2),?)]\][cond(not(hasattrval(%i0,desc_cur)),,match(name(%i0),xget(%i0,desc_cur)),,%b<[xget(%i0,desc_cur)]>)]%b<[vol_getproperty(%i0,SCENE)]>[if(vol_isadmin(%#),%b<%i0>)],36),%b,|),37,78,|),,)]
+
+&THINGS`SRW #344=setq(things,sort(lvthings(%!),name))[center(vol_separator(Objects,,,,76),80)]%r[align(1. 76 1.,,table(iter(sortkey(#lambda/haspower(\%0,tport_anything),%q<things>,n),ljust(if(haspower(%i0,tport_anything),click(enter %i0,left(moniker(%i0),30)),name(%i0))[if(vol_isadmin(%#),%b<%i0>)],36),%b,|),37,78,|),,)]
+
+&SETTINGS`ROOM_PLAYERS #344=SRW
+&SETTINGS`ROOM_THINGS #344=SRW

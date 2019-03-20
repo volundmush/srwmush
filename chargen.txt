@@ -1,0 +1,19 @@
+&CMD`MCS`ATTR Generator: Characters=$attr *=*:@trigger/spoof #10/INC`FINGER`SET=[v(%#)]/%0,%1;@@ OLD CODE - th if(v(%#),if(t(member(lcstr(get(%vb/list`attr)),lcstr(%0))),[attrib_set([v(%#)]/PROF`%0,%1)][pemit(%#,[ansi(h,CHARGEN:)] You set [name(v(%#))]'s %0 attribute.)],pemit(%#,[ansi(h,CHARGEN:)] That is not one of the protected attributes.)),pemit(%#,[ansi(h,CHARGEN:)] You have not selected a character to stat yet.))
+
+&CMD`MCS`DONE #88=$+done:th [setq(0,v(%#))][iter(get(%vb/list`attr),if(not(u(check`##,%q0)),pemit(%#,[ansi(hr,CHARGEN:)] [name(%q0)] has no ## set.)))][pemit(%#,[ansi(h,CHARGEN:)] Be sure to double check all armor stats and attacks.%r[ansi(h,CHARGEN:)] Character initialized.)][set(%q0,s`COMBAT:1)][set(%q0,s`effects:1)][set(%q0,s`datas:1)][if(get(%q0/s`approved),set(%q0,s`changes:[get(%q0/s`changes)] %#|[secs()]),set(%q0,s`approved:%#|[secs()]))][iter(lattr(%!/%#**),[set(%!,##:)])][set(%vf,charlist:[setunion([get(%vf/charlist)],%q0)])]
+
+&CHECK`TYPE #88=strlen(elements(get(%0/V`THEME),2,chr(177)))
+&CHECK`TAGS #88=strlen(get(%0/D`FINGER`TAGS))
+&CHECK`ALIASES #88=strlen(get(%0/D`FINGER`ALIASES))
+&CHECK`RACE #88=strlen(get(%0/D`FINGER`RACE))
+&CHECK`TEMPLATE #88=strlen(get(%0/D`FINGER`TEMPLATE))
+&CHECK`FACTION #88=words(get(%0/V`TIERS`2))
+&CHECK`PRIMARY #88=strlen(get(%0/D`FINGER`PRIMARY))
+&CHECK`SECONDARY #88=strlen(get(%0/D`FINGER`SECONDARY))
+&CHECK`QUOTE #88=strlen(get(%0/D`FINGER`QUOTE))
+&CHECK`PROFILE #88=strlen(get(%0/D`FINGER`PROFILE))
+&CHECK`SKILLS #88=strlen(get(%0/D`FINGER`SKILLS))
+&CHECK`SERIES #88=strlen(elements(get(%0/V`THEME),3,chr(177)))
+
+
+&LIST`ATTR #7=Type Tags Aliases Race Template Faction Primary Secondary Quote Profile Skills Series

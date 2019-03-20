@@ -1,0 +1,9 @@
+SQL-
+
+*READ*
+User: phantasm_srw2
+pass: AntiSpiral6
+
+*WRITE*
+User: phantasm_srw1
+pass: AntiSpiral5

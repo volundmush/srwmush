@@ -1,0 +1,16 @@
+
+&FINGER`ALTERNATE [u(cobj,finger)]=@pemit %#=header(u(color,%#,border),u(width,%#),255,u(getproperty,%q<t1>,NAME),255,fullalias(%q<t1>));th u(setq,col1,u(conf,LEFT_COLUMN));th u(setq,ljust1,lmath(max,iter(%q<col1>,strlen(elements(##,2,~)),|,%b)));th u(setq,col2,u(conf,RIGHT_COLUMN));th u(setq,ljust2,lmath(max,iter(%q<col2>,strlen(elements(##,2,~)),|,%b)));@pemit %#=align(1. [add(floor(fdiv(sub(u(width,%#),7),2)),2)] [ceil(fdiv(sub(u(width,%#),7),2))]` 1.,,iter(%q<col1>,ljust(elements(##,2,~),%q<ljust1>):%B[u(strfirstof,u(getprop,%q<t1>,elements(##,1,~),D`FINGER),elements(##,3,~))],|,%R),iter(%q<col2>,ljust(elements(##,2,~),%q<ljust2>):%B[u(strfirstof,u(getprop,%q<t1>,elements(##,1,~),D`FINGER),elements(##,3,~))],|,%R),);@dolist/inline/delimit | [u(conf,BOTTOM_COLUMN)]=@select/inline strlen(u(setr,found,u(strfirstof,u(getprop,%q<t1>,elements(##,1,~),D`FINGER),elements(##,3,~))))=>0,{@pemit %#=subheader(u(capnames,u(strfirstof,elements(##,2,~),##)),,,0);@pemit %#=align(1. [sub(u(width,%#),4)] 1.,,edit(%q<found>,%t,space(8)),)};@pemit %#=footer(u(color,%#,border),u(width,%#),255,u(strfirstof,u(getproperty,%q<t1>,type))[if(hasattrval(%q<t1>,D`FINGER`TAGS),%b\([xget(%q<t1>,D`FINGER`TAGS)]\))],255,xget(%q<t1>,D`FINGER`TEMPLATE));
+
++gameconfig finger/header=NONE~~
++gameconfig finger/column1=CHARNAME~Name~Unknown|MAJORNAMECLICK~Faction~Unaffiliated|PRIMARY~Unit~None|ALIASES~Aliases
++gameconfig finger/column2=RACE~Race~Human|MAJORRANK~Rank~N/A|SECONDARY~Unit~N/A
++gameconfig finger/playerset=CHARNAME|ALIASES
+
++gameconfig oocfinger/column=ALIAS~Alias|MAIL~Mush Mail|LAST~Last On|CONTACT~Contact|HOMEPAGE~Homepage|THEMESONG~Theme Song|ALTS~Alts|OTHER~Other Alts|VOICEACTOR~Voice Actor
+
++gameconfig oocfinger/playerset=CONTACT|HOMEPAGE|THEMESONG|OTHER|VOICEACTOR|NOTES
+
+&GETPROPERTY`RACE [u(cobj,mco)]=get(%0/D`FINGER`RACE)[if(u(setr,template,get(%0/D`FINGER`TEMPLATE)),%B\(%q<template>\))]
+&GETPROPERTY`TYPETHEME [u(cobj,mco)]=u(getproperty`type,%0) - [u(getproperty`theme,%0)]
+&GETPROPERTY`PRIMARY [u(cobj,mco)]=get(%0/D`FINGER`PRIMARY)
+&GETPROPERTY`SECONDARY [u(cobj,mco)]=get(%0/D`FINGER`SECONDARY)

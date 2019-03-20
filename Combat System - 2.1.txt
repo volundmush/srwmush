@@ -1,0 +1,1229 @@
+th u(NEWCOBJ,Combat System <CSYS>,csys,,,,WIZARD SAFE !NO_COMMAND,INHERIT SIDEFX SAFE)
+th u(NEWCOBJ,Csys Database <csys>,csys,,csys,1,WIZARD SAFE !NO_COMMAND,INHERIT SIDEFX SAFE)
+
+&SYSTEM`SWITCHES [u(cobj,csys)]=setunion(u(%q<sysname>`%q<command>`PLAYER),if(u(isadmin`%va,%#),u(%q<sysname>`%q<command>`ADMIN)),|,|)
+&SYSTEM`NAME [u(cobj,csys)]=u(strfirstof`%va,%q<sysname>,COMBAT)
+
+&FUN`VERSION [u(cobj,csys)]=not(default(%#/D`CSYS`VERSION,0))
+
+@lock/use [u(cobj,csys)]=FUN`VERSION/1
+
+&CMD`CHARGEN [u(cobj,csys)]=$^(?s)\+(select|add|remove|set|create|delete|clear|list|search|mode|view|mp|submit|matrix|switch)(?\:/(\S+))?(?\: +(.+?))?(?\:/(.+?)?)?(?\:=(.*))?$:th u(setq`%va,command,%1);th u(setq`%va,sysname,CHARGEN);@attach %!/INC`GETSWITCH=%2;@attach %!/INC`PLAYERID=%:,1;@attach %!/INC`%q<sysname>`%q<command>`[u(strfirstof,%q<switch>,MAIN)]=%3,%4,%5
+@set [u(cobj,csys)]/CMD`CHARGEN=regexp
+
+&CHARGEN`SELECT`PLAYER [u(cobj,csys)]=
+&CHARGEN`SELECT`ADMIN [u(cobj,csys)]=
+&CHARGEN`ADD`PLAYER [u(cobj,csys)]=
+&CHARGEN`ADD`ADMIN [u(cobj,csys)]=
+&CHARGEN`REMOVE`PLAYER [u(cobj,csys)]=
+&CHARGEN`REMOVE`ADMIN [u(cobj,csys)]=
+&CHARGEN`SET`PLAYER [u(cobj,csys)]=
+&CHARGEN`SET`ADMIN [u(cobj,csys)]=
+&CHARGEN`CREATE`PLAYER [u(cobj,csys)]=
+&CHARGEN`CREATE`ADMIN [u(cobj,csys)]=
+&CHARGEN`DELETE`PLAYER [u(cobj,csys)]=
+&CHARGEN`DELETE`ADMIN [u(cobj,csys)]=
+&CHARGEN`SEARCH`PLAYER [u(cobj,csys)]=
+&CHARGEN`SEARCH`ADMIN [u(cobj,csys)]=
+&CHARGEN`MODE`PLAYER [u(cobj,csys)]=
+&CHARGEN`MODE`ADMIN [u(cobj,csys)]=
+&CHARGEN`VIEW`PLAYER [u(cobj,csys)]=
+&CHARGEN`VIEW`ADMIN [u(cobj,csys)]=
+&CHARGEN`MP`PLAYER [u(cobj,csys)]=CLAIM|RELEASE
+&CHARGEN`MP`ADMIN [u(cobj,csys)]=ADD|REMOVE|FACTION|UNFACTION
+
+@@ ---- Section for version Switch....
+
+&INC`CHARGEN`SWITCH`MAIN [u(cobj,csys)]=@check elock(#997/Basic,%#)=@attach %!/INC`MSG=ERROR: Permission denied.;@attach %!/INC`VERIFY=[ansi(hr,WARNING:)] This will switch your Combat System version to [if(default(%#/D`CSYS`VERSION,0),Version 2.x,Version 3.x)]. Your current status and settings will be cleared. Pilot and Mecha data is retained should you switch back. Enter the same command again within ten seconds to verify.,COMBAT SWITCH;@attach %!/INC`MSG=You have switched combat system versions.;@attach %!/INC`MSG`ROOM=Switched to Combat system: [if(default(%#/D`CSYS`VERSION,0),Version 2.x,Version 3.x)];&D`CSYS`VERSION %#=not(get(%#/D`CSYS`VERSION))
+
+@@ ----------- SECTION FOR PLAYER ID AND SELECT
+
+&INC`PLAYERID [u(cobj,csys)]=@check objid(%0)=@attach %!/INC`MSG=ERROR: Invalid Objid!;@select/inline gt(u(setr`%va,pid%1,u(mysql,get`player_from_objid,%0)),0)=0,{@attach %!/INC`DOSQL=NEW`PLAYER/pid%1,%0,name(%0)};@select/inline not(u(mysql,GET`SELECT,r(pid%1)))=1,{@attach %!/INC`DOSQL=NEW`SELECT,r(pid%1)}
+
+&Q`NEW`PLAYER [u(cobj,csys)]=INSERT INTO csys_players (objid,player_name) VALUES (?,?)
+
+&Q`GET`PLAYER_OBJID_FROM_ID [u(cobj,csys)]=SELECT objid FROM csys_players WHERE id=?
+&Q`GET`PLAYER_FROM_OBJID [u(cobj,csys)]=SELECT id FROM csys_players WHERE objid=?
+&Q`GET`PLAYER_FROM_ID [u(cobj,csys)]=SELECT id FROM csys_players WHERE id=?
+
+&Q`GET`PILOTS [u(cobj,csys)]=SELECT pilot_id from csys_player_pilots WHERE player_id=?
+
+&Q`GET`SELECT [u(cobj,csys)]=SELECT id from csys_select where id=?
+&Q`NEW`SELECT [u(cobj,csys)]=INSERT INTO csys_select(id) VALUES (?)
+
+@@ ----------- SECTION FOR +SELECT
+
+&INC`CHARGEN`SELECT`MAIN [u(cobj,csys)]=@check strlen(%0)=@attach %!/INC`MSG=What will you select?;@attach %!/INC`PARTIAL=%0,PLAYER|PILOT|MECHA|ATTACK,|,type;@attach %!/INC`CHARGEN`SELECT`%q<type>
+
+&INC`CHARGEN`SELECT`PLAYER [u(cobj,csys)]=@select/inline u(isadmin`%va,%#)=1,{@attach %!/INC`CHECKPC=%2,1},{@attach %!/INC`CHECKPC=%#,1;@attach %!/INC`MSG=You can only select yourself.};@attach %!/INC`PLAYERID=%q<t1objid>,2;@select/inline words(u(setr`%va,pilot_id,first(u(mysql,GET`PILOTS,%q<pid2>))))=0,{@attach %!/INC`DOSQL=NEW`PILOT/pilot_id,%q<t1name>;@attach %!/INC`DOSQL=LINK`PILOT/link_id,%q<pid2>,%q<pilot_id>};@attach %!/INC`DOSQL=SELECT`SET`PILOT,%q<pilot_id>,%q<pid1>;@attach %!/INC`DOSQL=SELECT`SET`PLAYER,%q<pid2>,%q<pid1>;&D`SELECT`MODE %#=PILOT;@attach %!/INC`SHOWSELECT
+
+&Q`SELECT`SET`PLAYER [u(cobj,csys)]=UPDATE csys_select SET player_id=?,pilot_id=NULL,mech_id=NULL,attack_id=NULL where id=?
+&Q`SELECT`SET`PILOT [u(cobj,csys)]=UPDATE csys_select SET pilot_id=? where id=?
+&Q`SELECT`SET`MECHA [u(cobj,csys)]=UPDATE csys_select SET mech_id=?,attack_id=NULL where id=?
+&Q`SELECT`SET`ATTACK [u(cobj,csys)]=UPDATE csys_select SET attack_id=? where id=?
+
+&Q`SELECT`GET`PLAYER [u(cobj,csys)]=SELECT player_id FROM csys_select WHERE id=?
+&Q`SELECT`GET`PILOT [u(cobj,csys)]=SELECT pilot_id FROM csys_select WHERE id=?
+&Q`SELECT`GET`MECHA [u(cobj,csys)]=SELECT mech_id FROM csys_select WHERE id=?
+&Q`SELECT`GET`ATTACK [u(cobj,csys)]=SELECT attack_id FROM csys_select WHERE id=?
+
+&INC`CHARGEN`SELECT`PILOT [u(cobj,csys)]=@attach %!/INC`SELECT`PLAYER;@check strlen(%2)=@attach %!/INC`MSG=ERROR: No pilot name entered to select.;@check u(setr`%va,pilot_id,u(mysql,FIND`PILOT,%q<player_id>,%2,%2))=@attach %!/INC`MSG=ERROR: Pilot '%2' not found.;@attach %!/INC`DOSQL=SELECT`SET`PILOT,%q<pilot_id>,%q<pid1>;&D`SELECT`MODE %#=PILOT;@attach %!/INC`SHOWSELECT
+
+&INC`CHARGEN`SELECT`MECHA [u(cobj,csys)]=@attach %!/INC`SELECT`PLAYER;@check strlen(%2)=@attach %!/INC`MSG=ERROR: No mecha name entered to select.;@check u(setr`%va,mech_id,u(mysql,FIND`MECHA,%q<player_id>,%2,%2))=@attach %!/INC`MSG=ERROR: Mecha '%2' not found.;@attach %!/INC`DOSQL=SELECT`SET`MECHA,%q<mech_id>,%q<pid1>;&D`SELECT`MODE %#=MECHA;@attach %!/INC`SHOWSELECT
+
+&INC`CHARGEN`SELECT`ATTACK [u(cobj,csys)]=@attach %!/INC`SELECT`PLAYER;@attach %!/INC`SELECT`MECHA;@check strlen(%2)=@attach %!/INC`MSG=ERROR: No Attack name entered to select.;@check u(setr`%va,attack_id,u(mysql,FIND`ATTACK,%q<mech_id>,%2,%2))=@attach %!/INC`MSG=ERROR: Attack '%2' not found.;@attach %!/INC`DOSQL=SELECT`SET`ATTACK,%q<attack_id>,%q<pid1>;&D`SELECT`MODE %#=ATTACK;@attach %!/INC`SHOWSELECT
+
+&Q`FIND`MECHA [u(cobj,csys)]=SELECT mech.id FROM csys_mechas as mech LEFT JOIN csys_player_mechas as link ON link.mech_id=mech.id WHERE link.player_id=? AND (mech.name LIKE '!%%' OR mech.id=?) LIMIT 1
+&Q`FIND`PILOT [u(cobj,csys)]=SELECT pilot.id from csys_player_pilots as link LEFT JOIN csys_pilots as pilot ON link.pilot_id=pilot.id WHERE link.player_id=? AND (pilot.name LIKE '!%%' OR pilot.id=?) LIMIT 1
+&Q`FIND`ATTACK [u(cobj,csys)]=SELECT id from csys_attacks WHERE mech_id=? AND (name LIKE '?%%' OR id=?) LIMIT 1
+
+&INC`CHARGEN`VIEW`MAIN [u(cobj,csys)]=@select/inline strlen(%0)=>0,{@attach %!/INC`PARTIAL=%0,PILOT|MECHA|ATTACK,|,choice;&D`SELECT`MODE %#=%q<choice>};@attach %!/INC`SHOWSELECT
+
+&INC`SHOWSELECT [u(cobj,csys)]=th u(setr`%va,selects,u(mysql3,SELECT`GET`ALL,%q<pid1>));th u(setq`%va,player_id,elements(%q<selects>,1,chr(177)));th u(setq`%va,pilot_id,elements(%q<selects>,3,chr(177)));th u(setq`%va,mech_id,elements(%q<selects>,6,chr(177)));th u(setq`%va,attack_id,elements(%q<selects>,9,chr(177)));@pemit %#=u(header,Character Editor: [if(%q<player_id>,elements(%q<selects>,1,chr(177)):%b[elements(%q<selects>,2,chr(177))],<unset>)]);@pemit %#=ansi(u(color`%va,%#,COLOR,COLUMN_NAMES),align(25 26 25,Pilot,Mecha,Attack));@pemit %#=u(separator,Available);@pemit %#=align(25 26 25,if(%q<player_id>,iter(u(mysql3,SELECT`SHOW`PILOTS,%q<player_id>),elements(%i0,1,chr(177)):%b[elements(%i0,2,chr(177))][switch(elements(%i0,3,chr(177)),2,\([ansi(hg,O)]\),1,\([ansi(hy,*)]\),\([ansi(hr,X)]\))][if(elements(%i0,4,chr(177)),\(MP\))],chr(176),%r)),if(%q<player_id>,iter(u(mysql3,SELECT`SHOW`MECHAS,%q<player_id>),elements(%i0,1,chr(177)):%b[elements(%i0,2,chr(177))][switch(elements(%i0,3,chr(177)),2,\([ansi(hg,O)]\),1,\([ansi(hy,*)]\),\([ansi(hr,X)]\))][if(elements(%i0,4,chr(177)),\(MP\))],chr(176),%r)),if(%q<mech_id>,iter(u(mysql3,SELECT`SHOW`ATTACKS,%q<mech_id>),elements(%i0,1,chr(177)):%b[elements(%i0,2,chr(177))],chr(176),%r)));@pemit %#=u(separator,Selected);@pemit %#=align(25 26 25,if(u(setr`%va,pilot_id,elements(%q<selects>,3,chr(177))),elements(%q<selects>,3,chr(177)):%b[elements(%q<selects>,4,chr(177))][switch(elements(%q<selects>,5,chr(177)),2,\([ansi(hg,O)]\),1,\([ansi(hy,*)]\),\([ansi(hr,X)]\))],<unset>),if(u(setr`%va,mech_id,elements(%q<selects>,6,chr(177))),elements(%q<selects>,6,chr(177)):%b[elements(%q<selects>,7,chr(177))][switch(elements(%q<selects>,8,chr(177)),2,\([ansi(hg,O)]\),1,\([ansi(hy,*)]\),\([ansi(hr,X)]\))],<unset>),if(u(setr`%va,attack_id,elements(%q<selects>,9,chr(177))),elements(%q<selects>,9,chr(177)):%b[elements(%q<selects>,10,chr(177))],<unset>));@pemit %#=u(footer,Mode: [default(%#/D`SELECT`MODE,<unset>)]);@attach %!/INC`SHOWSELECT`[default(%#/D`SELECT`MODE,NONE)]
+
+&Q`SELECT`GET`ALL [u(cobj,csys)]=SELECT sel.player_id,ply.player_name, sel.pilot_id, pil.name, plink.approved, sel.mech_id, mech.name, link.approved, sel.attack_id, atk.name FROM csys_select as sel LEFT JOIN csys_players as ply ON ply.id=sel.player_id LEFT JOIN csys_pilots as pil on pil.id=sel.pilot_id LEFT JOIN csys_generic_pilot as gen on gen.id=sel.pilot_id LEFT JOIN csys_player_pilots as plink on plink.player_id=sel.player_id AND plink.pilot_id=sel.pilot_id LEFT JOIN csys_mechas as mech ON sel.mech_id=mech.id LEFT JOIN csys_player_mechas as link on link.player_id=sel.player_id AND link.mech_id=sel.mech_id LEFT JOIN csys_mp_mecha as mp ON sel.mech_id=mp.id LEFT JOIN csys_attacks as atk ON atk.id=sel.attack_id WHERE sel.id=?
+
+&Q`SELECT`SHOW`PILOTS [u(cobj,csys)]=SELECT pilot.id,pilot.name,link.approved,gen.id FROM csys_player_pilots as link LEFT JOIN csys_pilots as pilot on link.pilot_id=pilot.id LEFT JOIN csys_generic_pilot as gen ON gen.id=link.pilot_id WHERE link.player_id=? ORDER BY pilot.id
+&Q`SELECT`SHOW`MECHAS [u(cobj,csys)]=SELECT mech.id,mech.name,link.approved,mp.id FROM csys_mechas as mech LEFT JOIN csys_player_mechas as link ON link.mech_id=mech.id LEFT JOIN csys_mp_mecha as mp on mp.id=link.mech_id WHERE link.player_id=? ORDER BY mech.id
+&Q`SELECT`SHOW`ATTACKS [u(cobj,csys)]=SELECT id,name FROM csys_attacks where mech_id=? ORDER BY id
+
+&INC`SHOWSELECT`PILOT [u(cobj,csys)]=@pemit %#=ansi(u(color`%va,%#,COLOR,COLUMN_NAMES),align(4 4 4 4 4 4 4 4 5 15 15,MEL,RNG,SKL,AIM,AGI,MOB,DEF,ARM,CST,Abilities,Boosts));@pemit %#=u(separator);th u(setq`%va,pilot,u(mysql3,SELECT`ALL`PILOT,%q<pilot_id>));@pemit %#=align(4 4 4 4 4 4 4 4 5 15 15,elements(%q<pilot>,1,chr(177)),elements(%q<pilot>,2,chr(177)),elements(%q<pilot>,3,chr(177)),elements(%q<pilot>,4,chr(177)),elements(%q<pilot>,5,chr(177)),elements(%q<pilot>,6,chr(177)),elements(%q<pilot>,7,chr(177)),elements(%q<pilot>,8,chr(177)),lmath(add,elements(%q<pilot>,1 2 3 4 5 6 7 8,chr(177),%b)),u(FUN`LIST`PILOT`ABILITIES,%q<pilot_id>),u(FUN`LIST`PILOT`BOOSTS,%q<pilot_id>));@pemit %#=u(footer)
+
+&FUN`LIST`PILOT`ABILITIES [u(cobj,csys)]=iter(u(mysql,SELECT`SHOW`PILOT`ABILITIES,%0),if(not(%1),%i0:%B)[default(%!/ABIL`%i0,<unknown>)],%b,%R)
+&FUN`LIST`PILOT`BOOSTS [u(cobj,csys)]=iter(u(mysql,SELECT`SHOW`PILOT`BOOSTS,%0),if(not(%1),%i0:%B)[default(%!/BOOST`%i0,<unknown>)],%b,%R)
+
+
+&Q`SELECT`ALL`PILOT [u(cobj,csys)]=SELECT mel,rng,skl,aim,agi,mob,def,arm FROM csys_pilots where id=? LIMIT 1
+&Q`SELECT`SHOW`PILOT`ABILITIES [u(cobj,csys)]=SELECT trait_id from csys_pilot_traits where pilot_id=? and mode_id=0  order by trait_id
+&Q`SELECT`SHOW`PILOT`BOOSTS [u(cobj,csys)]=SELECT trait_id from csys_pilot_traits where pilot_id=? and mode_id=1 order by trait_id
+
+
+&INC`SELECT`PLAYER [u(cobj,csys)]=@check u(setr`%va,player_id,u(mysql,SELECT`GET`PLAYER,%q<pid1>))=@attach %!/INC`MSG=ERROR: No player selected.
+
+&INC`SELECT`PILOT [u(cobj,csys)]=@check u(setr`%va,pilot_id,u(mysql,SELECT`GET`PILOT,%q<pid1>))=@attach %!/INC`MSG=ERROR: No Pilot selected.
+
+&INC`SELECT`MECHA [u(cobj,csys)]=@check u(setr`%va,mech_id,u(mysql,SELECT`GET`MECHA,%q<pid1>))=@attach %!/INC`MSG=ERROR: No Mecha selected.
+
+&INC`SELECT`ATTACK [u(cobj,csys)]=@check u(setr`%va,attack_id,u(mysql,SELECT`GET`ATTACK,%q<pid1>))=@attach %!/INC`MSG=ERROR: No Attack selected.
+
+&INC`SHOWSELECT`MECHA [u(cobj,csys)]=@pemit %#=ansi(u(color`%va,%#,COLOR,COLUMN_NAMES),align(4 4 4 4 4 4 4 4 5 15 15,MEL,RNG,SKL,AIM,AGI,MOB,DEF,ARM,CST,Abilities,Boosts));@pemit %#=u(separator);th u(setq`%va,mech,u(mysql3,SELECT`ALL`MECHA,%q<mech_id>));@pemit %#=align(4 4 4 4 4 4 4 4 5 15 15,elements(%q<mech>,1,chr(177)),elements(%q<mech>,2,chr(177)),elements(%q<mech>,3,chr(177)),elements(%q<mech>,4,chr(177)),elements(%q<mech>,5,chr(177)),elements(%q<mech>,6,chr(177)),elements(%q<mech>,7,chr(177)),elements(%q<mech>,8,chr(177)),lmath(add,elements(%q<mech>,1 2 3 4 5 6 7 8,chr(177),%b)),u(FUN`LIST`MECHA`ABILITIES,%q<mech_id>),u(FUN`LIST`MECHA`BOOSTS,%q<mech_id>));@pemit %#=u(footer,if(u(isadmin`%va,%#),Tech Level: [if(elements(%q<mech>,10,chr(177)),X,elements(%q<mech>,9,chr(177)))]));@attach %!/INC`SHOWSELECT`ATTACK`LIST
+
+&FUN`LIST`MECHA`ABILITIES [u(cobj,csys)]=iter(u(mysql,SELECT`SHOW`MECHA`ABILITIES,%0),if(not(%1),%i0:%B)[default(%!/ABIL`%i0,<unknown>)],%b,%R)
+&FUN`LIST`MECHA`BOOSTS [u(cobj,csys)]=iter(u(mysql,SELECT`SHOW`MECHA`BOOSTS,%0),if(not(%1),%i0:%B)[default(%!/BOOST`%i0,<unknown>)],%b,%R)
+
+&Q`SELECT`ALL`MECHA [u(cobj,csys)]=SELECT mel,rng,skl,aim,agi,mob,def,arm,tech,tech_x FROM csys_mechas where id=? LIMIT 1
+&Q`SELECT`SHOW`MECHA`ABILITIES [u(cobj,csys)]=SELECT trait_id from csys_mech_traits where mech_id=? and mode_id=0 order by trait_id
+&Q`SELECT`SHOW`MECHA`BOOSTS [u(cobj,csys)]=SELECT trait_id from csys_mech_traits where mech_id=? and mode_id=1 order by trait_id
+
+&INC`SHOWSELECT`ATTACK [u(cobj,csys)]=@attach %!/INC`SHOWSELECT`MECHA
+
+@@ @pemit %#=ansi(u(color`%va,%#,COLOR,COLUMN_NAMES),align(10 20 20 20,Level,Type,Mechanism,Effect));@pemit %#=u(separator);th u(setq`%va,atk,u(mysql3,SELECT`ALL`ATTACK,%q<attack_id>));@pemit %#=align(10 20 20 20,elements(%q<atk>,1,chr(177)),elements(%q<atk>,2,chr(177)): [get(u(cobj,csys)/TYPE`[elements(%q<atk>,2,chr(177))])],elements(%q<atk>,3,chr(177)): [get(u(cobj,csys)/MECHANISM`[elements(%q<atk>,3,chr(177))])],iter(u(mysql,SELECT`SHOW`ATTACK_EFFECTS,%q<attack_id>),%i0: [default(%!/EFFECT`%i0,<unknown>)],%b,%R));@pemit %#=u(footer)
+
+&Q`SELECT`ALL`ATTACK [u(cobj,csys)]=SELECT level,type_id,mechanism_id FROM csys_attacks where id=? LIMIT 1
+&Q`SELECT`SHOW`ATTACK_EFFECTS [u(cobj,csys)]=SELECT effect_id from csys_attack_effects where attack_id=? order by effect_id
+
+&INC`SHOWSELECT`ATTACK`LIST [u(cobj,csys)]=@pemit %#=u(subheader,Attacks);@pemit %#=ansi(u(color`%va,%#,COLOR,COLUMN_NAMES),align(15 3 15 15 15 5 3,Name,LVL,Type,Mechanism,Effect,Heat,Sig));@pemit %#=u(separator);@dolist/inline/delimit [chr(176)] [u(mysql3,SELECT`ALL`ATTACK_DETAILS,%q<mech_id>)]={@pemit %#=align(15 3 15 15 15 5 3,elements(%i0,1,chr(177)): [elements(%i0,2,chr(177))],elements(%i0,3,chr(177)),default(%!/TYPE`[elements(%i0,4,chr(177))],<Unknown>),default(%!/MECHANISM`[elements(%i0,5,chr(177))],<Unknown>),iter(u(mysql,SELECT`SHOW`ATTACK_EFFECTS,elements(%i0,1,chr(177))),%i0: [default(%!/EFFECT`%i0,<Unknown>)],%b,%R),??,if(elements(%i0,6,chr(177)),ansi(hg,Y),ansi(hr,N)))};@pemit %#=u(footer)
+
+&Q`SELECT`ALL`ATTACK_DETAILS [u(cobj,csys)]=SELECT id,name,level,type_id,mechanism_id,signature FROM csys_attacks where mech_id=? ORDER BY level
+
+&SIZE [u(cobj,csys)]=switch(%0,1,Light,2,Medium,3,Heavy,4,Assault,5,Superheavy,<Unset>)
+&MECHSIZE [u(cobj,csys)]=u(size,get(%0/D`COMBAT`STATS`MECHA`SIZE))
+
+@@ ----- SECTION FOR +MODE
+&INC`CHARGEN`MODE`MAIN [u(cobj,csys)]=@check strlen(%0)=@attach %!/INC`MSG=ERROR: What mode will you use?;@attach %!/INC`PARTIAL=%0,PILOT|MECHA|ATTACK,|,choice;&D`SELECT`MODE %#=%q<choice>;@attach %!/INC`MSG=Now editing %q<choice>.
+
+@@ --------- SECTION FOR +CREATE
+
+&INC`CHARGEN`CREATE`MAIN [u(cobj,csys)]=@check strlen(%0)=@attach %!/INC`MSG=What will you create?;@attach %!/INC`PARTIAL=%0,PILOT|MECHA|ATTACK|SIGNATURE,|,type;@attach %!/INC`CHARGEN`CREATE`%q<type>
+
+&INC`CHARGEN`CREATE`PILOT [u(cobj,csys)]=@attach %!/INC`SELECT`PLAYER;@check strlen(%2)=@attach %!/INC`MSG=ERROR: Pilots require names.;@stop u(mysql,EXIST`PILOT,%q<player_id>,%2)=@attach %!/INC`MSG=ERROR: Pilot of that name already exists.;@attach %!/INC`DOSQL=NEW`PILOT/pilot_id,%2;@attach %!/INC`DOSQL=LINK`PILOT/link_id,%q<player_id>,%q<pilot_id>;@attach %!/INC`DOSQL=SELECT`SET`PILOT,%q<pilot_id>,%q<pid1>;@attach %!/INC`MSG=Pilot created.;&D`SELECT`MODE %#=PILOT;@attach %!/INC`SHOWSELECT
+
+&Q`EXIST`PILOT [u(cobj,csys)]=SELECT pilot.id from csys_player_pilots as link LEFT JOIN csys_pilots on link.pilot_id=pilot.id WHERE link.player_id=? AND pilot.name=? LIMIT 1
+&Q`NEW`PILOT [u(cobj,csys)]=INSERT INTO csys_pilots (name,creation_date) VALUES (?,UTC_TIMESTAMP())
+&Q`LINK`PILOT [u(cobj,csys)]=INSERT INTO csys_player_pilots (player_id, pilot_id) VALUES (?,?) ON DUPLICATE KEY UPDATE pilot_id=pilot_id
+
+&INC`CHARGEN`CREATE`MECHA [u(cobj,csys)]=@attach %!/INC`SELECT`PLAYER;@check strlen(%2)=@attach %!/INC`MSG=ERROR: Mechas require names.;@stop u(mysql,EXIST`MECHA,%q<player_id>,%2)=@attach %!/INC`MSG=ERROR: Mecha of that name already exists.;@attach %!/INC`DOSQL=NEW`MECHA/mech_id,%2;@attach %!/INC`DOSQL=LINK`MECHA,%q<player_id>,%q<mech_id>;@attach %!/INC`DOSQL=SELECT`SET`MECHA,%q<mech_id>,%q<pid1>;@attach %!/INC`MSG=Pilot created.;&D`SELECT`MODE %#=MECHA;@attach %!/INC`SHOWSELECT
+
+&Q`NEW`MECHA [u(cobj,csys)]=INSERT INTO csys_mechas (name) VALUES (?)
+&Q`LINK`MECHA [u(cobj,csys)]=INSERT INTO csys_player_mechas (player_id, mech_id) VALUES (?,?) ON DUPLICATE KEY UPDATE mech_id=mech_id
+
+&Q`EXIST`MECHA [u(cobj,csys)]=SELECT mech.id FROM csys_mechas as mech LEFT JOIN csys_player_mechas as link ON link.mech_id=mech.id WHERE link.player_id=? AND mech.name=? LIMIT 1
+
+&INC`CHARGEN`CREATE`ATTACK [u(cobj,csys)]=@attach %!/INC`SELECT`PLAYER;@attach %!/INC`SELECT`MECHA;th u(setr`%va,input,squish(%2));@check strlen(u(setr`%va,name,trim(stripansi(before(%q<input>,\,)))))=@attach %!/INC`MSG=ERROR: Attacks require names.;@stop u(mysql,EXIST`ATTACK,%q<mech_id>,%q<name>)=@attach %!/INC`MSG=ERROR: Attack of that name already exists.;@select/inline strlen(after(%q<input>,\,))=>0,{@check eq(words(u(setr`%va,mainlist,elements(%q<input>,2,\,))),3)=@attach %!/INC`MSG=ERROR: Cannot quick-create attacks without Level\, Type\, and Mechanism.;@check cand(u(valnum,u(setr`%va,level,elements(%q<mainlist>,1))),lte(%q<level>,10))=@attach %!/INC`MSG=ERROR: Level must be a number 1-10.;@check cor(strlen(u(setr`%va,find,u(filter,EXACT_TRAIT,u(setr`%va,types,reglattr(u(cobj,csys)/^TYPE`\\d+$)),%b,%b,elements(%q<mainlist>,2)))),strlen(u(setr`%va,find,u(filter,WILD_TRAIT,%q<types>,%b,%b,elements(%q<mainlist>,2)))))=@attach %!/INC`MSG=ERROR: Could not find Type named '[elements(%q<mainlist>,2)]'.;th u(setq`%va,type,last(%q<find>,`));@check cor(strlen(u(setr`%va,find,u(filter,EXACT_TRAIT,u(setr`%va,types,reglattr(u(cobj,csys)/^MECHANISM`\\d+$)),%b,%b,elements(%q<mainlist>,3)))),strlen(u(setr`%va,find,u(filter,WILD_TRAIT,%q<types>,%b,%b,elements(%q<mainlist>,3)))))=@attach %!/INC`MSG=ERROR: Could not find Mechanism named '[elements(%q<mainlist>,3)]'.;th u(setq`%va,mechanism,last(%q<find>,`));@select/inline strlen(u(setr`%va,effectnames,after(after(%q<input>,\,),\,)))=>0,{@dolist/inline/delimit [chr(176)] [edit(%q<effectnames>,\,,chr(176))]={@check cor(strlen(u(setr`%va,find,u(filter,EXACT_TRAIT,u(setr`%va,types,reglattr(u(cobj,csys)/^EFFECT`\\d+$)),%b,%b,%i0))),strlen(u(setr`%va,find,u(filter,WILD_TRAIT,%q<types>,%b,%b,%i0))))=@attach %!/INC`MSG=ERROR: Could not find Effect named '%i0'.;th u(setq`%va,effects,setunion(%q<effects>,last(%q<find>,`)))};@check lmath(min,iter(%q<effects>,match(if(%3,setunion(u(%!/EFFECTS`SIGNATURE),u(%!/EFFECTS`SPECIAL)),u(%!/EFFECTS`SPECIAL)),%i0)))=@attach %!/INC`MSG=ERROR: One of the chosen Effects is inapplicable for this attack type.};@attach %!/INC`DOSQL=QUICK`ATTACK/attack_id,%q<mech_id>,%q<name>,if(%3,1,0),%q<level>,%q<type>,%q<mechanism>;@dolist/inline %q<effects>={@attach %!/INC`DOSQL=ADD`ATTACK`EFFECT,%q<attack_id>,%i0}},{@attach %!/INC`DOSQL=NEW`ATTACK/attack_id,%q<mech_id>,%q<name>,if(%3,1,0)};@attach %!/INC`DOSQL=SELECT`SET`ATTACK,%q<attack_id>,%q<pid1>;@attach %!/INC`MSG=Attack created.;&D`SELECT`MODE %#=ATTACK;@attach %!/INC`SHOWSELECT
+
+&Q`EXIST`ATTACK [u(cobj,csys)]=SELECT id FROM csys_attacks WHERE mech_id=? and name=? LIMIT 1
+&Q`NEW`ATTACK [u(cobj,csys)]=INSERT INTO csys_attacks (mech_id,name,signature) VALUES (?,?,?)
+&Q`QUICK`ATTACK [u(cobj,csys)]=INSERT INTO csys_attacks (mech_id,name,signature,level,type_id,mechanism_id) VALUES (?,?,?,?,?,?)
+
+&INC`CHARGEN`CREATE`SIGNATURE [u(cobj,csys)]=@attach %!/INC`CHARGEN`CREATE`ATTACK=%0,%1,%2,1
+
+@@ ------ +DELETE SECTION
+&INC`CHARGEN`DELETE`MAIN [u(cobj,csys)]=@check strlen(%0)=@attach %!/INC`MSG=What will you delete?;@attach %!/INC`PARTIAL=%0,PILOT|MECHA|ATTACK,|,type;@attach %!/INC`CHARGEN`DELETE`%q<type>
+
+&INC`CHARGEN`DELETE`PILOT [u(cobj,csys)]=@attach %!/INC`SELECT`PLAYER;@check strlen(%2)=@attach %!/INC`MSG=ERROR: Pilots require names.;@check u(setr`%va,pilot_id,u(mysql,FIND`PILOT,%q<player_id>,%2,%2))=@attach %!/INC`MSG=ERROR: Pilot '%2' not found.;@check cor(u(isadmin`%va,%#),nor(u(setr`%va,appsta,u(mysql,DELETE`PILOT`APPROVED,%q<player_id>,%q<pilot_id>)),u(setr`%va,gensta,u(mysql,DELETE`PILOT`GENERIC,%q<player_id>,%q<pilot_id>))))=@attach %!/INC`MSG=ERROR: Permission denied. [if(%q<appsta>,switch(%q<appsta>,2,Item is approved.,1,Item is pending review.),Item is a generic.)];@attach %!/INC`VERIFY=[ansi(hr,WARNING:)] The pilot will be deleted. This cannot be undone! Enter the same command again in ten seconds to verify.,DELETE PILOT %q<pilot_id>;@attach %!/INC`DOSQL=DELETE`PILOT,%q<pilot_id>;@attach %!/INC`MSG=Deleted Pilot '%2'!
+
+&Q`DELETE`PILOT [u(cobj,csys)]=DELETE FROM csys_pilots where id=?
+&Q`DELETE`PILOT`APPROVED [u(cobj,csys)]=SELECT approved FROM csys_player_pilots WHERE player_id=? AND pilot_id=?
+&Q`DELETE`PILOT`GENERIC [u(cobj,csys)]=SELECT gen.id FROM csys_player_pilots as link LEFT JOIN csys_generic_pilot as gen ON gen.id=link.pilot_id WHERE link.player_id=? AND link.pilot_id=?
+
+&Q`GET`PILOT`APPROVED [u(cobj,csys)]=SELECT approved FROM csys_player_pilots WHERE player_id=? AND pilot_id=? limit 1
+
+&INC`CHARGEN`DELETE`MECHA [u(cobj,csys)]=@attach %!/INC`SELECT`PLAYER;@check strlen(%2)=@attach %!/INC`MSG=ERROR: Mechas require names.;@check u(setr`%va,mech_id,u(mysql,FIND`MECHA,%q<player_id>,%2,%2))=@attach %!/INC`MSG=ERROR: Mecha '%2' not found.;@check cor(u(isadmin`%va,%#),nor(u(setr`%va,appsta,u(mysql,DELETE`MECHA`APPROVED,%q<player_id>,%q<mech_id>)),u(setr`%va,gensta,u(mysql,DELETE`MECHA`GENERIC,%q<player_id>,%q<mech_id>))))=@attach %!/INC`MSG=ERROR: Permission denied. [if(%q<appsta>,switch(%q<appsta>,2,Item is approved.,1,Item is pending review.),Item is a generic.)];@attach %!/INC`VERIFY=[ansi(hr,WARNING:)] The Mecha will be deleted. This cannot be undone! Enter the same command again in ten seconds to verify.,DELETE MECHA %q<mech_id>;@attach %!/INC`DOSQL=DELETE`MECHA,%q<mech_id>;@attach %!/INC`MSG=Deleted Mecha '%2'!
+
+&Q`DELETE`MECHA [u(cobj,csys)]=DELETE FROM csys_mechas where id=?
+&Q`DELETE`MECHA`APPROVED [u(cobj,csys)]=SELECT approved FROM csys_player_mechas WHERE player_id=? AND mech_id=?
+&Q`DELETE`MECHA`GENERIC [u(cobj,csys)]=SELECT gen.id FROM csys_player_mechas as link LEFT JOIN csys_mp_mecha as gen ON gen.id=link.mech_id WHERE link.player_id=? AND link.mech_id=?
+
+&INC`CHARGEN`DELETE`ATTACK [u(cobj,csys)]=@attach %!/INC`SELECT`PLAYER;@attach %!/INC`SELECT`MECHA;@check strlen(%2)=@attach %!/INC`MSG=ERROR: No Attack name entered to delete.;@check u(setr`%va,attack_id,u(mysql,FIND`ATTACK,%q<mech_id>,%2,%2))=@attach %!/INC`MSG=ERROR: Attack '%2' not found.;@check cor(u(isadmin`%va,%#),nor(u(setr`%va,appsta,u(mysql,DELETE`MECHA`APPROVED,%q<player_id>,%q<mech_id>)),u(setr`%va,gensta,u(mysql,DELETE`MECHA`GENERIC,%q<player_id>,%q<mech_id>))))=@attach %!/INC`MSG=ERROR: Permission denied. [if(%q<appsta>,switch(%q<appsta>,2,Item is approved.,1,Item is pending review.),Item is a generic.)];@attach %!/INC`VERIFY=[ansi(hr,WARNING:)] The Attack will be deleted. This cannot be undone! Enter the same command again in ten seconds to verify.,DELETE Attack %q<attack_id>;@attach %!/INC`DOSQL=DELETE`ATTACK,%q<attack_id>;@attach %!/INC`MSG=Deleted Attack '%2'!
+
+&Q`DELETE`ATTACK [u(cobj,csys)]=DELETE FROM csys_attacks where id=?
+
+@@ ------ +CLEAR Section
+&INC`CHARGEN`CLEAR`MAIN [u(cobj,csys)]=@attach %!/INC`SELECT`PLAYER;th u(setq`%va,mode,default(%#/D`SELECT`MODE,None));@check words(u(setr`%va,typchoices,switch(%q<mode>,PILOT,ABILITIES|BOOSTS,MECHA,ABILITIES|BOOSTS|ATTACKS)),|)=@attach %!/INC`MSG=Mode '%q<mode>' cannot clear anything.;@check strlen(%0)=@attach %!/INC`MSG=What will you clear?;@attach %!/INC`PARTIAL=%0,%q<typchoices>,|,type;@attach %!/INC`CHARGEN`CLEAR`READY`%q<mode>;@attach %!/INC`CHARGEN`CLEAR`%q<mode>`%q<type>
+
+&INC`CHARGEN`CLEAR`READY`PILOT [u(cobj,csys)]=@attach %!/INC`SELECT`PILOT;@check cor(u(isadmin`%va,%#),not(u(setr`%va,appsta,u(mysql,GET`PILOT`APPROVED,%q<pilot_id>))))=@attach %!/INC`MSG=ERROR: Permission denied. [switch(%q<appsta>,1,This item is pending review.,2,This is approved.)];
+&INC`CHARGEN`CLEAR`READY`MECHA [u(cobj,csys)]=@attach %!/INC`SELECT`PILOT;@attach %!/INC`SELECT`MECHA;@check cor(u(isadmin`%va,%#),not(u(setr`%va,appsta,u(mysql,GET`MECHA`APPROVED,%q<player_id>,%q<mech_id>))))=@attach %!/INC`MSG=ERROR: Permission denied. [switch(%q<appsta>,1,This item is pending review.,2,This is approved.)];
+
+&INC`CHARGEN`CLEAR`PILOT`ABILITIES [u(cobj,csys)]=@attach %!/INC`DOSQL=CLEAR`PILOT`ABILITIES,%q<pilot_id>;@attach %!/INC`MSG=Pilot Abilities cleared!
+
+&Q`CLEAR`PILOT`ABILITIES [u(cobj,csys)]=DELETE FROM csys_pilot_traits WHERE pilot_id=? and mode_id=0
+
+&INC`CHARGEN`CLEAR`MECHA`ABILITIES [u(cobj,csys)]=@attach %!/INC`DOSQL=CLEAR`MECHA`ABILITIES,%q<mech_id>;@attach %!/INC`MSG=Mecha Abilities cleared!
+
+&Q`CLEAR`MECHA`ABILITIES [u(cobj,csys)]=DELETE FROM csys_mech_traits WHERE mech_id=? and mode_id=0
+
+&INC`CHARGEN`CLEAR`PILOT`BOOSTS [u(cobj,csys)]=@attach %!/INC`DOSQL=CLEAR`PILOT`BOOSTS,%q<pilot_id>;@attach %!/INC`MSG=Pilot Boosts cleared!
+
+&Q`CLEAR`PILOT`BOOSTS [u(cobj,csys)]=DELETE FROM csys_pilot_traits WHERE pilot_id=? and mode_id=1
+
+&INC`CHARGEN`CLEAR`MECHA`BOOSTS [u(cobj,csys)]=@attach %!/INC`DOSQL=CLEAR`MECHA`BOOSTS,%q<mech_id>;@attach %!/INC`MSG=Mecha Boosts cleared!
+&Q`CLEAR`MECHA`BOOSTS [u(cobj,csys)]=DELETE FROM csys_mech_traits WHERE mech_id=? and mode_id=1
+
+&INC`CHARGEN`CLEAR`MECHA`ATTACKS [u(cobj,csys)]=@attach %!/INC`DOSQL=CLEAR`MECHA`ATTACKS,%q<mech_id>;@attach %!/INC`MSG=Mecha Attacks cleared!
+&Q`CLEAR`MECHA`ATTACKS [u(cobj,csys)]=DELETE FROM csys_attacks WHERE mech_id=?
+
+@@ ------ +SET Section
+
+&INC`CHARGEN`SET`MAIN [u(cobj,csys)]=@attach %!/INC`SELECT`PLAYER;@attach %!/INC`CHARGEN`SET`[default(%#/D`SELECT`MODE,None)]
+
+&INC`CHARGEN`SET`NONE [u(cobj,csys)]=@attach %!/INC`MSG=ERROR: No Mode selected!
+
+&INC`CHARGEN`SET`PILOT [u(cobj,csys)]=@attach %!/INC`SELECT`PILOT;@check cor(u(isadmin`%va,%#),not(u(setr`%va,appsta,u(mysql,GET`PILOT`APPROVED,%q<pilot_id>))))=@attach %!/INC`MSG=ERROR: Permission denied. [switch(%q<appsta>,1,This item is pending review.,2,This is approved.)];@attach %!/INC`PARTIAL=%0,NAME|MEL|RNG|SKL|AIM|AGI|MOB|DEF|ARM|STATS[if(u(isadmin`%va,%#),|APPROVED)],|,choice;@attach %!/INC`CHARGEN`SET`PILOT`%q<choice>;@attach %!/INC`SHOWSELECT
+
+&INC`CHARGEN`SET`PILOT`NAME [u(cobj,csys)]=@check strlen(%2)=@attach %!/INC`MSG=ERROR: Nothing entered to Name to!;@stop isint(%2)=@attach %!/INC`MSG=ERROR: None of that tomfoolery please.;@check if(u(setr`%va,exist,u(mysql,EXIST`PILOT,%q<player_id>,%2)),eq(%q<exist>,%q<pilot_id>),1)=@attach %!/INC`MSG=ERROR: Pilot names must be unique per player.;@attach %!/INC`DOSQL=SET`PILOT`NAME,%2,%q<pilot_id>
+
+&INC`CHARGEN`SET`PILOT`MEL [u(cobj,csys)]=@attach %!/INC`CHARGEN`SET`PILOT`STAT
+&INC`CHARGEN`SET`PILOT`RNG [u(cobj,csys)]=@attach %!/INC`CHARGEN`SET`PILOT`STAT
+&INC`CHARGEN`SET`PILOT`SKL [u(cobj,csys)]=@attach %!/INC`CHARGEN`SET`PILOT`STAT
+&INC`CHARGEN`SET`PILOT`AIM [u(cobj,csys)]=@attach %!/INC`CHARGEN`SET`PILOT`STAT
+&INC`CHARGEN`SET`PILOT`AGI [u(cobj,csys)]=@attach %!/INC`CHARGEN`SET`PILOT`STAT
+&INC`CHARGEN`SET`PILOT`MOB [u(cobj,csys)]=@attach %!/INC`CHARGEN`SET`PILOT`STAT
+&INC`CHARGEN`SET`PILOT`DEF [u(cobj,csys)]=@attach %!/INC`CHARGEN`SET`PILOT`STAT
+&INC`CHARGEN`SET`PILOT`ARM [u(cobj,csys)]=@attach %!/INC`CHARGEN`SET`PILOT`STAT
+
+&INC`CHARGEN`SET`PILOT`STAT [u(cobj,csys)]=@check strlen(%2)=@attach %!/INC`MSG=ERROR: Nothing entered to set %q<choice> to!;@check cand(isint(%2),gte(%2,30))=@attach %!/INC`MSG=ERROR: %q<choice> must be a whole number greater than 30.;@attach %!/INC`DOSQL=SET`PILOT`%q<choice>,%2,%q<pilot_id>;
+
+&Q`SET`PILOT`NAME [u(cobj,csys)]=UPDATE csys_pilots SET name=? WHERE id=?
+&Q`SET`PILOT`MEL [u(cobj,csys)]=UPDATE csys_pilots SET mel=? WHERE id=?
+&Q`SET`PILOT`RNG [u(cobj,csys)]=UPDATE csys_pilots SET rng=? WHERE id=?
+&Q`SET`PILOT`SKL [u(cobj,csys)]=UPDATE csys_pilots SET skl=? WHERE id=?
+&Q`SET`PILOT`AIM [u(cobj,csys)]=UPDATE csys_pilots SET aim=? WHERE id=?
+&Q`SET`PILOT`AGI [u(cobj,csys)]=UPDATE csys_pilots SET agi=? WHERE id=?
+&Q`SET`PILOT`MOB [u(cobj,csys)]=UPDATE csys_pilots SET mob=? WHERE id=?
+&Q`SET`PILOT`DEF [u(cobj,csys)]=UPDATE csys_pilots SET def=? WHERE id=?
+&Q`SET`PILOT`ARM [u(cobj,csys)]=UPDATE csys_pilots SET arm=? WHERE id=?
+&Q`SET`PILOT`APPROVED [u(cobj,csys)]=UPDATE csys_player_pilots SET approved=? WHERE player_id=? AND pilot_id=?
+
+&INC`CHARGEN`SET`PILOT`APPROVED [u(cobj,csys)]=@check match(0 1,%2)=@attach %!/INC`MSG=ERROR: Approved must be 0 (false) or 1 (true).;@attach %!/INC`DOSQL=SET`PILOT`APPROVED,if(%2,2,0),%q<player_id>,%q<pilot_id>;
+
+&Q`SET`PILOT`ALLSTATS [u(cobj,csys)]=UPDATE csys_pilots set mel=?,rng=?,skl=?,aim=?,agi=?,mob=?,def=?,arm=? WHERE id=?
+
+&INC`CHARGEN`SET`PILOT`STATS [u(cobj,csys)]=@check strlen(%2)=@attach %!/INC`MSG=ERROR: Nothing entered to set %q<choice> to!;@check gte(words(%2),8)=@attach %!/INC`MSG=ERROR: Requires 8 stats.;@check lmath(min,iter(%2,cand(isint(%i0),gte(%i0,30))))=@attach %!/INC`MSG=ERROR: One or more of the entered stats wasn't a positive integer 30 or more.;@attach %!/INC`DOSQL=SET`PILOT`ALLSTATS,elements(%2,1),elements(%2,2),elements(%2,3),elements(%2,4),elements(%2,5),elements(%2,6),elements(%2,7),elements(%2,8),%q<pilot_id>;
+
+@@ MECHA
+&INC`CHARGEN`SET`MECHA [u(cobj,csys)]=@attach %!/INC`SELECT`PILOT;@attach %!/INC`SELECT`MECHA;@check cor(u(isadmin`%va,%#),not(u(setr`%va,appsta,u(mysql,GET`MECHA`APPROVED,%q<player_id>,%q<mech_id>))))=@attach %!/INC`MSG=ERROR: Permission denied. [switch(%q<appsta>,1,This item is pending review.,2,This is approved.)];@attach %!/INC`PARTIAL=%0,NAME|MEL|RNG|SKL|AIM|AGI|MOB|DEF|ARM|STATS|SIZE[if(u(isadmin`%va,%#),|APPROVED|TECH)],|,choice;@attach %!/INC`CHARGEN`SET`MECHA`%q<choice>;@attach %!/INC`SHOWSELECT
+
+&Q`GET`MECHA`APPROVED [u(cobj,csys)]=SELECT approved from csys_player_mechas WHERE player_id=? and mech_id=? limit 1
+
+&INC`CHARGEN`SET`MECHA`NAME [u(cobj,csys)]=@check strlen(%2)=@attach %!/INC`MSG=ERROR: Nothing entered to Name to!;@stop isint(%2)=@attach %!/INC`MSG=ERROR: None of that tomfoolery please.;@check if(u(setr`%va,exist,u(mysql,EXIST`MECHA,%q<player_id>,%2)),if(eq(%q<exist>,%q<mech_id>),1,0),1)=@attach %!/INC`MSG=ERROR: Mecha names must be unique per player.;@attach %!/INC`DOSQL=SET`MECHA`NAME,%2,%q<mech_id>
+
+&INC`CHARGEN`SET`MECHA`MEL [u(cobj,csys)]=@attach %!/INC`CHARGEN`SET`MECHA`STAT
+&INC`CHARGEN`SET`MECHA`RNG [u(cobj,csys)]=@attach %!/INC`CHARGEN`SET`MECHA`STAT
+&INC`CHARGEN`SET`MECHA`SKL [u(cobj,csys)]=@attach %!/INC`CHARGEN`SET`MECHA`STAT
+&INC`CHARGEN`SET`MECHA`AIM [u(cobj,csys)]=@attach %!/INC`CHARGEN`SET`MECHA`STAT
+&INC`CHARGEN`SET`MECHA`AGI [u(cobj,csys)]=@attach %!/INC`CHARGEN`SET`MECHA`STAT
+&INC`CHARGEN`SET`MECHA`MOB [u(cobj,csys)]=@attach %!/INC`CHARGEN`SET`MECHA`STAT
+&INC`CHARGEN`SET`MECHA`DEF [u(cobj,csys)]=@attach %!/INC`CHARGEN`SET`MECHA`STAT
+&INC`CHARGEN`SET`MECHA`ARM [u(cobj,csys)]=@attach %!/INC`CHARGEN`SET`MECHA`STAT
+
+&INC`CHARGEN`SET`MECHA`STAT [u(cobj,csys)]=@check strlen(%2)=@attach %!/INC`MSG=ERROR: Nothing entered to set %q<choice> to!;@check cand(isint(%2),gte(%2,30))=@attach %!/INC`MSG=ERROR: %q<choice> must be a whole number greater than 30.;@attach %!/INC`DOSQL=SET`MECHA`%q<choice>,%2,%q<mech_id>;
+
+&Q`SET`MECHA`NAME [u(cobj,csys)]=UPDATE csys_mechas SET name=? WHERE id=?
+&Q`SET`MECHA`MEL [u(cobj,csys)]=UPDATE csys_mechas SET mel=? WHERE id=?
+&Q`SET`MECHA`RNG [u(cobj,csys)]=UPDATE csys_mechas SET rng=? WHERE id=?
+&Q`SET`MECHA`SKL [u(cobj,csys)]=UPDATE csys_mechas SET skl=? WHERE id=?
+&Q`SET`MECHA`AIM [u(cobj,csys)]=UPDATE csys_mechas SET aim=? WHERE id=?
+&Q`SET`MECHA`AGI [u(cobj,csys)]=UPDATE csys_mechas SET agi=? WHERE id=?
+&Q`SET`MECHA`MOB [u(cobj,csys)]=UPDATE csys_mechas SET mob=? WHERE id=?
+&Q`SET`MECHA`DEF [u(cobj,csys)]=UPDATE csys_mechas SET def=? WHERE id=?
+&Q`SET`MECHA`ARM [u(cobj,csys)]=UPDATE csys_mechas SET arm=? WHERE id=?
+&Q`SET`MECHA`APPROVED [u(cobj,csys)]=UPDATE csys_player_mechas SET approved=? WHERE player_id=? AND mech_id=?
+
+&Q`SET`MECHA`ALLSTATS [u(cobj,csys)]=UPDATE csys_mechas set mel=?,rng=?,skl=?,aim=?,agi=?,mob=?,def=?,arm=? WHERE id=?
+
+&INC`CHARGEN`SET`MECHA`STATS [u(cobj,csys)]=@check strlen(%2)=@attach %!/INC`MSG=ERROR: Nothing entered to set %q<choice> to!;@check gte(words(%2),8)=@attach %!/INC`MSG=ERROR: Requires 8 stats.;@check lmath(min,iter(%2,cand(isint(%i0),gte(%i0,30))))=@attach %!/INC`MSG=ERROR: One or more of the entered stats wasn't a positive integer 30 or more.;@attach %!/INC`DOSQL=SET`MECHA`ALLSTATS,elements(%2,1),elements(%2,2),elements(%2,3),elements(%2,4),elements(%2,5),elements(%2,6),elements(%2,7),elements(%2,8),%q<mech_id>;
+
+&INC`CHARGEN`SET`MECHA`APPROVED [u(cobj,csys)]=@check match(0 1,%2)=@attach %!/INC`MSG=ERROR: Approved must be 0 (false) or 1 (true).;@attach %!/INC`DOSQL=SET`MECHA`APPROVED,if(%2,2,0),%q<player_id>,%q<mech_id>;
+
+&INC`CHARGEN`SET`MECHA`TECH [u(cobj,csys)]=@check strlen(%2)=@attach %!/INC`MSG=ERROR: Nothing entered to set %q<choice> to!;@check cor(cand(isint(%2),gte(%2,0)),strmatch(%2,X))=@attach %!/INC`MSG=ERROR: %q<choice> must be a whole positive number or X.;@select/inline %2=X,{@attach %!/INC`DOSQL=SET`MECHA`TECHX,%q<mech_id>},{@attach %!/INC`DOSQL=SET`MECHA`TECH,%2,%q<mech_id>}
+
+&Q`SET`MECHA`TECHX [u(cobj,csys)]=UPDATE csys_mechas SET tech_x=1,tech=0 WHERE id=?
+&Q`SET`MECHA`TECH [u(cobj,csys)]=UPDATE csys_mechas set tech_x=0,tech=? WHERE id=?
+
+&INC`CHARGEN`SET`MECHA`SIZE [u(cobj,csys)]=@check strlen(%2)=@attach %!/INC`MSG=ERROR: Nothing entered to set %q<choice> to!;@attach %!/INC`PARTIAL=%2,LIGHT|MEDIUM|HEAVY|ASSAULT|SUPERHEAVY,|,sizename;th u(setq`%va,sizenum,match(LIGHT|MEDIUM|HEAVY|ASSAULT|SUPERHEAVY,%q<sizename>));@attach %!/INC`DOSQL=SET`MECHA`SIZE,%q<sizenum>,%q<mech_id>
+
+&Q`SET`MECHA`SIZE [u(cobj,csys)]=UPDATE csys_mechas SET size=? WHERE id=?
+
+@@ +Attack section
+&INC`CHARGEN`SET`ATTACK [u(cobj,csys)]=@attach %!/INC`SELECT`MECHA;@attach %!/INC`SELECT`ATTACK;@check cor(u(isadmin`%va,%#),not(u(mysql,GET`MECHA`APPROVED,%q<player_id>,%q<mech_id>)))=@attach %!/INC`MSG=ERROR: Permission denied.;@attach %!/INC`PARTIAL=%0,NAME|LEVEL|TYPE|MECHANISM|SIGNATURE,|,choice;@attach %!/INC`CHARGEN`SET`ATTACK`%q<choice>;@attach %!/INC`SHOWSELECT
+
+&INC`CHARGEN`SET`ATTACK`NAME [u(cobj,csys)]=@check strlen(%2)=@attach %!/INC`MSG=ERROR: Nothing entered to Name to!;@stop isint(%2)=@attach %!/INC`MSG=ERROR: None of that tomfoolery please.;@check if(u(setr`%va,exist,u(mysql,EXIST`ATTACK,%q<mech_id>,%2)),if(eq(%q<exist>,%q<attack_id>),1,0),1)=@attach %!/INC`MSG=ERROR: Attack names must be unique per Mecha.;@attach %!/INC`DOSQL=SET`ATTACK`NAME,%2,%q<attack_id>
+
+&Q`EXIST`ATTACK [u(cobj,csys)]=SELECT id FROM csys_attacks where mech_id=? and name=? LIMIT 1
+&Q`SET`ATTACK`NAME [u(cobj,csys)]=UPDATE csys_attacks SET name=? WHERE id=?
+
+&INC`CHARGEN`SET`ATTACK`LEVEL [u(cobj,csys)]=@check strlen(%2)=@attach %!/INC`MSG=ERROR: Nothing entered for the attack level!;@check cand(isint(%2),gte(%2,1),lte(%2,10))=@attach %!/INC`MSG=ERROR: Attack Levels must be a number 1-10.;@attach %!/INC`DOSQL=SET`ATTACK`LEVEL,%2,%q<attack_id>
+
+&Q`SET`ATTACK`LEVEL [u(cobj,csys)]=UPDATE csys_attacks SET level=? WHERE id=?
+
+&INC`CHARGEN`SET`ATTACK`TYPE [u(cobj,csys)]=@check strlen(%2)=@attach %!/INC`MSG=ERROR: No Type entered to set.;@check cor(strlen(u(setr`%va,find,u(filter,EXACT_TRAIT,u(setr`%va,types,reglattr(u(cobj,csys)/^TYPE`\\d+$)),%b,%b,%2))),strlen(u(setr`%va,find,u(filter,WILD_TRAIT,%q<types>,%b,%b,%2))))=@attach %!/INC`MSG=ERROR: Could not find Type named '%2'.;th u(setq`%va,type_id,last(%q<find>,`));@attach %!/INC`DOSQL=SET`ATTACK`TYPE,%q<type_id>,%q<attack_id>
+
+&Q`SET`ATTACK`TYPE [u(cobj,csys)]=UPDATE csys_attacks SET type_id=? WHERE id=?
+
+&INC`CHARGEN`SET`ATTACK`MECHANISM [u(cobj,csys)]=@check strlen(%2)=@attach %!/INC`MSG=ERROR: No Mechanism entered to set.;@check cor(strlen(u(setr`%va,find,u(filter,EXACT_TRAIT,u(setr`%va,types,reglattr(u(cobj,csys)/^MECHANISM`\\d+$)),%b,%b,%2))),strlen(u(setr`%va,find,u(filter,WILD_TRAIT,%q<types>,%b,%b,%2))))=@attach %!/INC`MSG=ERROR: Could not find Mechanism named '%2'.;th u(setq`%va,mechanism_id,last(%q<find>,`));@attach %!/INC`DOSQL=SET`ATTACK`MECHANISM,%q<mechanism_id>,%q<attack_id>
+
+&Q`SET`ATTACK`MECHANISM [u(cobj,csys)]=UPDATE csys_attacks SET mechanism_id=? WHERE id=?
+
+&INC`CHARGEN`SET`ATTACK`SIGNATURE [u(cobj,csys)]=@check strlen(%2)=@attach %!/INC`MSG=ERROR: Nothing entered for the signature!;@check match(0 1,%2)=@attach %!/INC`MSG=ERROR: Signature must be 0 (false) or 1 (true).;@attach %!/INC`DOSQL=SET`ATTACK`SIGNATURE,%2,%q<attack_id>
+
+&Q`SET`ATTACK`SIGNATURE [u(cobj,csys)]=UPDATE csys_attacks SET signature=? WHERE id=?
+
+@@ ---- +ADD SECTION
+&INC`CHARGEN`ADD`MAIN [u(cobj,csys)]=@attach %!/INC`SELECT`PLAYER;@attach %!/INC`CHARGEN`ADD`[default(%#/D`SELECT`MODE,None)]
+
+&INC`CHARGEN`ADD`NONE [u(cobj,csys)]=@attach %!/INC`MSG=ERROR: No mode selected!
+
+@@ Pilot
+&INC`CHARGEN`ADD`PILOT [u(cobj,csys)]=@attach %!/INC`SELECT`PILOT;@check cor(u(isadmin`%va,%#),not(u(setr`%va,appsta,u(mysql,GET`PILOT`APPROVED,%q<pilot_id>))))=@attach %!/INC`MSG=ERROR: Permission denied. [switch(%q<appsta>,1,This item is pending review.,2,This is approved.)];@attach %!/INC`PARTIAL=%0,ABILITY|BOOST,|,choice;@attach %!/INC`CHARGEN`ADD`PILOT`%q<choice>;@attach %!/INC`SHOWSELECT
+
+&INC`CHARGEN`ADD`PILOT`ABILITY [u(cobj,csys)]=@check strlen(%2)=@attach %!/INC`MSG=ERROR: No Ability entered to add.;@check cor(strlen(u(setr`%va,find,u(filter,EXACT_TRAIT,iter(u(%!/ABILITIES`PILOT),ABIL`%i0),%b,%b,%2))),strlen(u(setr`%va,find,u(filter,WILD_TRAIT,iter(u(%!/ABILITIES`PILOT),ABIL`%i0),%b,%b,%2))))=@attach %!/INC`MSG=ERROR: Could not find Ability named '%2'.;th u(setq`%va,abil_id,last(%q<find>,`));@stop u(mysql,EXIST`PILOT`ABILITY,%q<pilot_id>,%q<abil_id>)=@attach %!/INC`MSG=ERROR: Pilot already has that ability.;@attach %!/INC`DOSQL=ADD`PILOT`ABILITY,%q<pilot_id>,%q<abil_id>
+
+&FIL`EXACT_TRAIT [u(cobj,csys)]=strmatch(%1,get(u(cobj,csys)/%0))
+&FIL`WILD_TRAIT [u(cobj,csys)]=strmatch(get(u(cobj,csys)/%0),%1*)
+
+&Q`EXIST`PILOT`ABILITY [u(cobj,csys)]=SELECT id FROM csys_pilot_traits where mode_id=0 AND pilot_id=? AND trait_id=?
+&Q`ADD`PILOT`ABILITY [u(cobj,csys)]=INSERT INTO csys_pilot_traits (pilot_id,trait_id,mode_id) VALUES (?,?,0)
+
+&INC`CHARGEN`ADD`PILOT`BOOST [u(cobj,csys)]=@check strlen(%2)=@attach %!/INC`MSG=ERROR: No Boost entered to add.;@check cor(strlen(u(setr`%va,find,u(filter,EXACT_TRAIT,iter(u(%!/BOOSTS),BOOST`%i0),%b,%b,%2))),strlen(u(setr`%va,find,u(filter,WILD_TRAIT,iter(u(%!/BOOSTS),ABIL`%i0),%b,%b,%2))))=@attach %!/INC`MSG=ERROR: Could not find Boost named '%2'.;th u(setq`%va,boost_id,last(%q<find>,`));@stop u(mysql,EXIST`PILOT`BOOST,%q<pilot_id>,%q<boost_id>)=@attach %!/INC`MSG=ERROR: Pilot already has that Boost.;@attach %!/INC`DOSQL=ADD`PILOT`BOOST,%q<pilot_id>,%q<boost_id>
+
+&Q`EXIST`PILOT`BOOST [u(cobj,csys)]=SELECT id FROM csys_pilot_traits where mode_id=1 AND pilot_id=? AND trait_id=?
+&Q`ADD`PILOT`BOOST [u(cobj,csys)]=INSERT INTO csys_pilot_traits (pilot_id,trait_id,mode_id) VALUES (?,?,1)
+
+@@ MECHA SECTION
+&INC`CHARGEN`ADD`MECHA [u(cobj,csys)]=@attach %!/INC`SELECT`MECHA;@check cor(u(isadmin`%va,%#),not(u(setr`%va,appsta,u(mysql,GET`MECHA`APPROVED,%q<pilot_id>,%q<mech_id>))))=@attach %!/INC`MSG=ERROR: Permission denied. [switch(%q<appsta>,1,This item is pending review.,2,This is approved.)];@attach %!/INC`PARTIAL=%0,ABILITY|BOOST,|,choice;@attach %!/INC`CHARGEN`ADD`MECHA`%q<choice>;@attach %!/INC`SHOWSELECT
+
+&INC`CHARGEN`ADD`MECHA`ABILITY [u(cobj,csys)]=@check strlen(%2)=@attach %!/INC`MSG=ERROR: No Ability entered to add.;@check cor(strlen(u(setr`%va,find,u(filter,EXACT_TRAIT,iter(u(%!/ABILITIES`MECHA),ABIL`%i0),%b,%b,%2))),strlen(u(setr`%va,find,u(filter,WILD_TRAIT,iter(u(%!/ABILITIES`MECHA),ABIL`%i0),%b,%b,%2))))=@attach %!/INC`MSG=ERROR: Could not find Ability named '%2'.;th u(setq`%va,abil_id,last(%q<find>,`));@stop u(mysql,EXIST`MECHA`ABILITY,%q<mech_id>,%q<abil_id>)=@attach %!/INC`MSG=ERROR: Mecha already has that ability.;@attach %!/INC`DOSQL=ADD`MECHA`ABILITY,%q<mech_id>,%q<abil_id>
+
+&Q`EXIST`MECHA`ABILITY [u(cobj,csys)]=SELECT id FROM csys_mech_traits where mode_id=0 AND mech_id=? AND trait_id=?
+&Q`ADD`MECHA`ABILITY [u(cobj,csys)]=INSERT INTO csys_mech_traits (mech_id,trait_id,mode_id) VALUES (?,?,0)
+
+&INC`CHARGEN`ADD`MECHA`BOOST [u(cobj,csys)]=@check strlen(%2)=@attach %!/INC`MSG=ERROR: No Boost entered to add.;@check cor(strlen(u(setr`%va,find,u(filter,EXACT_TRAIT,iter(u(%!/BOOSTS),BOOST`%i0),%b,%b,%2))),strlen(u(setr`%va,find,u(filter,WILD_TRAIT,iter(u(%!/BOOSTS),ABIL`%i0),%b,%b,%2))))=@attach %!/INC`MSG=ERROR: Could not find Boost named '%2'.;th u(setq`%va,boost_id,last(%q<find>,`));@stop u(mysql,EXIST`MECHA`BOOST,%q<mech_id>,%q<boost_id>)=@attach %!/INC`MSG=ERROR: Mecha already has that Boost.;@attach %!/INC`DOSQL=ADD`MECHA`BOOST,%q<mech_id>,%q<boost_id>
+
+&Q`EXIST`MECHA`BOOST [u(cobj,csys)]=SELECT id FROM csys_mech_traits where mode_id=1 AND mech_id=? AND trait_id=?
+&Q`ADD`MECHA`BOOST [u(cobj,csys)]=INSERT INTO csys_mech_traits (mech_id,trait_id,mode_id) VALUES (?,?,1)
+
+@@ ATTACK SECTION
+&INC`CHARGEN`ADD`ATTACK [u(cobj,csys)]=@attach %!/INC`SELECT`MECHA;@attach %!/INC`SELECT`ATTACK;@check cor(u(isadmin`%va,%#),not(u(setr`%va,appsta,u(mysql,GET`MECHA`APPROVED,%q<pilot_id>,%q<mech_id>))))=@attach %!/INC`MSG=ERROR: Permission denied. [switch(%q<appsta>,1,This item is pending review.,2,This is approved.)];@attach %!/INC`PARTIAL=%0,EFFECT,|,choice;@attach %!/INC`CHARGEN`ADD`ATTACK`%q<choice>;@attach %!/INC`SHOWSELECT
+
+&INC`CHARGEN`ADD`ATTACK`EFFECT [u(cobj,csys)]=@check strlen(%2)=@attach %!/INC`MSG=ERROR: No Effect entered to add.;@check cor(strlen(u(setr`%va,find,u(filter,EXACT_TRAIT,reglattr(u(cobj,csys)/^EFFECT`\\d+$),%b,%b,%2))),strlen(u(setr`%va,find,u(filter,WILD_TRAIT,reglattr(u(cobj,csys)/^EFFECT`\\d+$),%b,%b,%2))))=@attach %!/INC`MSG=ERROR: Could not find Effect named '%2'.;th u(setq`%va,effect_id,last(%q<find>,`));@stop u(mysql,EXIST`ATTACK`EFFECT,%q<attack_id>,%q<effect_id>)=@attach %!/INC`MSG=ERROR: Attack already has that Effect.;@attach %!/INC`DOSQL=ADD`ATTACK`EFFECT,%q<attack_id>,%q<effect_id>
+
+&Q`EXIST`ATTACK`EFFECT [u(cobj,csys)]=SELECT id FROM csys_attack_effects where attack_id=? AND effect_id=?
+&Q`ADD`ATTACK`EFFECT [u(cobj,csys)]=INSERT INTO csys_attack_effects (attack_id, effect_id) VALUES (?,?)
+
+@@ ---- +REMOVE SECTION
+&INC`CHARGEN`REMOVE`MAIN [u(cobj,csys)]=@attach %!/INC`SELECT`PLAYER;@attach %!/INC`CHARGEN`REMOVE`[default(%#/D`SELECT`MODE,None)]
+
+&INC`CHARGEN`REMOVE`NONE [u(cobj,csys)]=@attach %!/INC`MSG=ERROR: No mode selected!
+
+@@ Pilot
+&INC`CHARGEN`REMOVE`PILOT [u(cobj,csys)]=@attach %!/INC`SELECT`PILOT;@check cor(u(isadmin`%va,%#),not(u(mysql,GET`PILOT`APPROVED,%q<pilot_id>)))=@attach %!/INC`MSG=ERROR: Permission denied.;@attach %!/INC`PARTIAL=%0,ABILITY|BOOST,|,choice;@attach %!/INC`CHARGEN`REMOVE`PILOT`%q<choice>;@attach %!/INC`SHOWSELECT
+
+&INC`CHARGEN`REMOVE`PILOT`ABILITY [u(cobj,csys)]=@check strlen(%2)=@attach %!/INC`MSG=ERROR: No Ability entered to remove.;@check cor(strlen(u(setr`%va,find,u(filter,EXACT_TRAIT,iter(u(%!/ABILITIES`PILOT),ABIL`%i0),%b,%b,%2))),strlen(u(setr`%va,find,u(filter,WILD_TRAIT,iter(u(%!/ABILITIES`PILOT),ABIL`%i0),%b,%b,%2))))=@attach %!/INC`MSG=ERROR: Could not find Ability named '%2'.;th u(setq`%va,abil_id,last(%q<find>,`));@check u(setr`%va,exist,u(mysql,EXIST`PILOT`ABILITY,%q<pilot_id>,%q<abil_id>))=@attach %!/INC`MSG=ERROR: Pilot lacks that ability.;@attach %!/INC`DOSQL=REMOVE`PILOT`ABILITY,%q<exist>
+
+&Q`REMOVE`PILOT`ABILITY [u(cobj,csys)]=DELETE FROM csys_pilot_traits where id=?
+
+&INC`CHARGEN`REMOVE`PILOT`BOOST [u(cobj,csys)]=@check strlen(%2)=@attach %!/INC`MSG=ERROR: No Boost entered to remove.;@check cor(strlen(u(setr`%va,find,u(filter,EXACT_TRAIT,iter(u(%!/BOOSTS),BOOST`%i0),%b,%b,%2))),strlen(u(setr`%va,find,u(filter,WILD_TRAIT,iter(u(%!/BOOSTS),ABIL`%i0),%b,%b,%2))))=@attach %!/INC`MSG=ERROR: Could not find Boost named '%2'.;th u(setq`%va,boost_id,last(%q<find>,`));@check u(setr`%va,exist,u(mysql,EXIST`PILOT`BOOST,%q<pilot_id>,%q<boost_id>))=@attach %!/INC`MSG=ERROR: Pilot lacks that Boost.;@attach %!/INC`DOSQL=REMOVE`PILOT`BOOST,%q<exist>
+
+&Q`REMOVE`PILOT`BOOST [u(cobj,csys)]=DELETE FROM csys_pilot_traits WHERE id=?
+
+@@ MECHA SECTION
+&INC`CHARGEN`REMOVE`MECHA [u(cobj,csys)]=@attach %!/INC`SELECT`MECHA;@check cor(u(isadmin`%va,%#),not(u(setr`%va,appsta,u(mysql,GET`MECHA`APPROVED,%q<pilot_id>,%q<mech_id>))))=@attach %!/INC`MSG=ERROR: Permission denied. [switch(%q<appsta>,1,This item is pending review.,2,This is approved.)];@attach %!/INC`PARTIAL=%0,ABILITY|BOOST,|,choice;@attach %!/INC`CHARGEN`REMOVE`MECHA`%q<choice>;@attach %!/INC`SHOWSELECT
+
+&INC`CHARGEN`REMOVE`MECHA`ABILITY [u(cobj,csys)]=@check strlen(%2)=@attach %!/INC`MSG=ERROR: No Ability entered to remove.;@check cor(strlen(u(setr`%va,find,u(filter,EXACT_TRAIT,iter(u(%!/ABILITIES`MECHA),ABIL`%i0),%b,%b,%2))),strlen(u(setr`%va,find,u(filter,WILD_TRAIT,iter(u(%!/ABILITIES`MECHA),ABIL`%i0),%b,%b,%2))))=@attach %!/INC`MSG=ERROR: Could not find Ability named '%2'.;th u(setq`%va,abil_id,last(%q<find>,`));@check u(setr`%va,exist,u(mysql,EXIST`MECHA`ABILITY,%q<mech_id>,%q<abil_id>))=@attach %!/INC`MSG=ERROR: Mecha lacks that ability.;@attach %!/INC`DOSQL=REMOVE`MECHA`ABILITY,%q<exist>
+
+&Q`REMOVE`MECHA`ABILITY [u(cobj,csys)]=DELETE FROM csys_mech_traits where id=?
+
+&INC`CHARGEN`REMOVE`MECHA`BOOST [u(cobj,csys)]=@check strlen(%2)=@attach %!/INC`MSG=ERROR: No Boost entered to remove.;@check cor(strlen(u(setr`%va,find,u(filter,EXACT_TRAIT,iter(u(%!/BOOSTS),BOOST`%i0),%b,%b,%2))),strlen(u(setr`%va,find,u(filter,WILD_TRAIT,iter(u(%!/BOOSTS),ABIL`%i0),%b,%b,%2))))=@attach %!/INC`MSG=ERROR: Could not find Boost named '%2'.;th u(setq`%va,boost_id,last(%q<find>,`));@check u(setr`%va,exist,u(mysql,EXIST`MECHA`BOOST,%q<mech_id>,%q<boost_id>))=@attach %!/INC`MSG=ERROR: Mecha lacks that Boost.;@attach %!/INC`DOSQL=REMOVE`MECHA`BOOST,%q<exist>
+
+&Q`REMOVE`MECHA`BOOST [u(cobj,csys)]=DELETE FROM csys_mech_traits where id=?
+
+@@ ATTACK SECTION
+&INC`CHARGEN`REMOVE`ATTACK [u(cobj,csys)]=@attach %!/INC`SELECT`MECHA;@attach %!/INC`SELECT`ATTACK;@check cor(u(isadmin`%va,%#),not(u(setr`%va,appsta,u(mysql,GET`MECHA`APPROVED,%q<pilot_id>,%q<mech_id>))))=@attach %!/INC`MSG=ERROR: Permission denied. [switch(%q<appsta>,1,This item is pending review.,2,This is approved.)];@attach %!/INC`PARTIAL=%0,EFFECT,|,choice;@attach %!/INC`CHARGEN`REMOVE`ATTACK`%q<choice>;@attach %!/INC`SHOWSELECT
+
+&INC`CHARGEN`REMOVE`ATTACK`EFFECT [u(cobj,csys)]=@check strlen(%2)=@attach %!/INC`MSG=ERROR: No Effect entered to remove.;@check cor(strlen(u(setr`%va,find,u(filter,EXACT_TRAIT,reglattr(u(cobj,csys)/^EFFECT`\\d+$),%b,%b,%2))),strlen(u(setr`%va,find,u(filter,WILD_TRAIT,reglattr(u(cobj,csys)/^EFFECT`\\d+$),%b,%b,%2))))=@attach %!/INC`MSG=ERROR: Could not find Effect named '%2'.;th u(setq`%va,effect_id,last(%q<find>,`));@check u(setr`%va,find,u(mysql,EXIST`ATTACK`EFFECT,%q<attack_id>,%q<effect_id>))=@attach %!/INC`MSG=ERROR: Attack lacks that Effect.;@attach %!/INC`DOSQL=REMOVE`ATTACK`EFFECT,%q<find>
+
+&Q`REMOVE`ATTACK`EFFECT [u(cobj,csys)]=DELETE FROM csys_attack_effects where id=?
+
+@@ MP/GENERIC SECTION
+
+&INC`STARTMP [u(cobj,csys)]=@check strlen(%0)=@attach %!/INC`MSG=ERROR: You must choose between PILOT and MECHA.;@attach %!/INC`PARTIAL=%0,PILOT|MECHA,|,type;@check strlen(%2)=@attach %!/INC`MSG=ERROR: What %q<type> will you look for? Enter its name or ID!;@check u(setr`%va,id,u(mysql,if(%3,EXIST`GENERIC`,FIND2`)%q<type>,%2,%2))=@attach %!/INC`MSG=ERROR: Nothing matched '%2'.;@stop gt(words(%q<id>),1)=@attach %!/INC`MSG=ERROR: '%2' matched %q<type> IDs [itemize(%q<id>,%b,and,\,)]. Please be more specific.;
+
+&INC`CHARGEN`MP`ADD [u(cobj,csys)]=@attach %!/INC`STARTMP=%0,%1,%2;@attach %!/INC`DOSQL=CREATE`GENERIC`%q<type>,%q<id>;@attach %!/INC`MSG=Listed!
+
+&INC`CHARGEN`MP`REMOVE [u(cobj,csys)]=@attach %!/INC`STARTMP=%0,%1,%2,1;@attach %!/INC`DOSQL=REMOVE`GENERIC`%q<type>,%q<id>;@attach %!/INC`MSG=De-listed!
+
+&Q`FIND2`PILOT [u(cobj,csys)]=SELECT id from csys_pilots where id=? or name=?
+&Q`FIND2`MECHA [u(cobj,csys)]=SELECT id from csys_mechas where id=? or name=?
+
+&Q`EXIST`GENERIC`PILOT [u(cobj,csys)]=SELECT pilot.id from csys_pilots as pilot LEFT JOIN csys_generic_pilot as gen ON pilot.id=gen.id WHERE pilot.id=? or pilot.name=? and gen.id IS NOT NULL
+
+&Q`EXIST`GENERIC`MECHA [u(cobj,csys)]=SELECT mech.id from csys_mechas as mech LEFT JOIN csys_mp_mecha as gen ON mech.id=gen.id WHERE mech.id=? or mech.name=? AND gen.id IS NOT NULL
+
+&Q`CREATE`GENERIC`PILOT [u(cobj,csys)]=INSERT INTO csys_generic_pilot (id) VALUES (?)
+&Q`CREATE`GENERIC`MECHA [u(cobj,csys)]=INSERT INTO csys_mp_mecha (id) VALUES (?)
+
+&Q`REMOVE`GENERIC`PILOT [u(cobj,csys)]=DELETE FROM csys_generic_pilot where id=?
+&Q`REMOVE`GENERIC`MECHA [u(cobj,csys)]=DELETE FROM csys_mp_mecha where id=?
+
+&Q`LINK`PILOT`GENERIC [u(cobj,csys)]=INSERT INTO csys_player_pilots (player_id, pilot_id, approved) VALUES (?,?,2) ON DUPLICATE KEY UPDATE pilot_id=pilot_id
+&Q`LINK`MECHA`GENERIC [u(cobj,csys)]=INSERT INTO csys_player_mechas (player_id, mech_id, approved) VALUES (?,?,2) ON DUPLICATE KEY UPDATE mech_id=mech_id
+
+&Q`GENERIC`RELEASE`PILOT [u(cobj,csys)]=DELETE FROM csys_player_pilots WHERE player_id=? and pilot_id=?
+&Q`GENERIC`RELEASE`MECHA [u(cobj,csys)]=DELETE FROM csys_player_mechas WHERE player_id=? and mech_id=?
+
+&INC`CHARGEN`MP`FACTION [u(Cobj,csys)]=@attach %!/INC`STARTMP=%0,%1,before(%2,/),1;@check isobjid(u(setr`%va,fac,objid(u(u(cobj,gms)/FUN`FINDGROUP,after(%2,/)))))=@attach %!/INC`MSG=ERROR: Group not found.;@attach %!/INC`DOSQL=FACTION`GENERIC`%q<type>,%q<fac>,%q<id>;@attach %!/INC`MSG=Faction set to [u(moniker`%va,%q<fac>)]!
+
+&Q`FACTION`GENERIC`MECHA [u(cobj,csys)]=UPDATE csys_mp_mecha SET lock_obj=? WHERE id=?
+&Q`FACTION`GENERIC`PILOT [u(cobj,csys)]=UPDATE csys_generic_pilot SET lock_obj=? WHERE id=?
+
+&INC`CHARGEN`MP`UNFACTION [u(Cobj,csys)]=@attach %!/INC`STARTMP=%0,%1,before(%2,/),1;@attach %!/INC`DOSQL=UNFACTION`GENERIC`%q<type>,%q<id>;@attach %!/INC`MSG=Faction unset!
+
+&Q`UNFACTION`GENERIC`MECHA [u(cobj,csys)]=UPDATE csys_mp_mecha SET lock_obj=NULL WHERE id=?
+&Q`UNFACTION`GENERIC`PILOT [u(cobj,csys)]=UPDATE csys_generic_pilot SET lock_obj=NULL WHERE id=?
+
+&INC`CHARGEN`MP`CLAIM [u(cobj,csys)]=@attach %!/INC`STARTMP=%0,%1,%2,1;@attach %!/INC`DOSQL=LINK`%q<type>`GENERIC,%q<pid1>,%q<id>;@attach %!/INC`MSG=Claimed generic %q<type>!
+
+&INC`CHARGEN`MP`RELEASE [u(cobj,csys)]=@attach %!/INC`STARTMP=%0,%1,%2,1;@attach %!/INC`DOSQL=GENERIC`RELEASE`%q<type>,%q<pid1>,%q<id>;@attach %!/INC`MSG=Released generic %q<type>!
+
+&INC`CHARGEN`MP`MAIN [u(cobj,csys)]=@check strlen(%0)=@attach %!/INC`MSG=ERROR: You must choose between PILOT and MECHA.;@attach %!/INC`PARTIAL=%0,PILOT|MECHA,|,type;@attach %!/INC`CHARGEN`MP`LIST`%q<type>
+
+&INC`CHARGEN`MP`LIST`PILOT [u(cobj,csys)]=@pemit %#=u(header,Generic Pilots);@pemit %#=ansi(u(color,%#,COLOR,COLUMN_NAMES),align(3 3 3 3 3 3 3 3 3 15 15,MEL,RNG,SKL,AIM,AGI,MOB,DEF,ARM,CST,Abilities,Boosts));@pemit %#=u(separator);@dolist/inline/delimit [chr(176)] [u(mysql3,LIST`GENERIC`PILOTS)]={@pemit %#=u(separator,elements(%i0,1,chr(177)): [elements(%i0,2,chr(177))][if(isobjid(u(setr`%va,fac,elements(%i0,11,chr(177)))),%b\([u(getproperty`groupname,%q<fac>)]\))]);@pemit %#=align(3 3 3 3 3 3 3 3 3 15 15,elements(%i0,3,chr(177)),elements(%i0,4,chr(177)),elements(%i0,5,chr(177)),elements(%i0,6,chr(177)),elements(%i0,7,chr(177)),elements(%i0,8,chr(177)),elements(%i0,9,chr(177)),elements(%i0,10,chr(177)),lmath(add,elements(%i0,lnum(3,10),chr(177),%b)),u(FUN`LIST`PILOT`ABILITIES,elements(%i0,1,chr(177)),1),u(FUN`LIST`PILOT`BOOSTS,elements(%i0,1,chr(177)),1))};@pemit %#=u(footer)
+
+&Q`LIST`GENERIC`PILOTS [u(cobj,csys)]=SELECT orig.id,orig.name,orig.mel,orig.rng,orig.skl,orig.aim,orig.agi,orig.mob,orig.def,orig.arm,gen.lock_obj FROM csys_generic_pilot as gen LEFT JOIN csys_pilots as orig ON orig.id=gen.id WHERE gen.id IS NOT NULL ORDER BY orig.name
+
+&Q`LIST`GENERIC`MECHA [u(cobj,csys)]=SELECT orig.id,orig.name,orig.mel,orig.rng,orig.skl,orig.aim,orig.agi,orig.mob,orig.def,orig.arm,orig.tech,orig.tech_x,gen.lock_obj FROM csys_mp_mecha as gen LEFT JOIN csys_mechas as orig ON orig.id=gen.id WHERE gen.id IS NOT NULL ORDER BY orig.name
+
+&INC`CHARGEN`MP`LIST`MECHA [u(cobj,csys)]=th u(setq`%va,tech,u(game_config,COMBAT,TECH_LEVEL));@pemit %#=u(header,Generic Mechs);@pemit %#=ansi(u(color,%#,COLOR,COLUMN_NAMES),align(3 3 3 3 3 3 3 3 3 15 15 4,MEL,RNG,SKL,AIM,AGI,MOB,DEF,ARM,CST,Abilities,Boosts,Tech));@pemit %#=u(separator);@dolist/inline/delimit [chr(176)] [u(mysql3,LIST`GENERIC`MECHA)]={@pemit %#=u(separator,elements(%i0,1,chr(177)): [elements(%i0,2,chr(177))][if(isobjid(u(setr`%va,fac,elements(%i0,13,chr(177)))),%b\([u(getproperty`groupname,%q<fac>)]\))]);@pemit %#=align(3 3 3 3 3 3 3 3 3 15 15 4,elements(%i0,3,chr(177)),elements(%i0,4,chr(177)),elements(%i0,5,chr(177)),elements(%i0,6,chr(177)),elements(%i0,7,chr(177)),elements(%i0,8,chr(177)),elements(%i0,9,chr(177)),elements(%i0,10,chr(177)),lmath(add,elements(%i0,lnum(3,10),chr(177),%b)),u(FUN`LIST`MECHA`ABILITIES,elements(%i0,1,chr(177)),1),u(FUN`LIST`MECHA`BOOSTS,elements(%i0,1,chr(177)),1),if(elements(%i0,12,chr(177)),EX,switch(sub(elements(%i0,11,chr(177)),%q<tech>),>=300,S,>=200,A,>=100,B,<=-300,F,<=-200,E,<=-100,D,C)))};@pemit %#=u(footer)
+
+@@ +submit section
+&INC`CHARGEN`SUBMIT`MAIN [u(cobj,csys)]=@attach %!/INC`SELECT`PLAYER;@check eq(%q<pid1>,%q<player_id>)=@attach %!/INC`MSG=ERROR: Cannot +submit on another's behalf.;@check strlen(%0)=@attach %!/INC`MSG=ERROR: Nothing selected to submit!;@attach %!/INC`PARTIAL=%0,PILOT|MECHA,|,choice;@attach %!/INC`CHARGEN`SUBMIT`[if(%q<choice>,%q<choice>,NONE)]
+
+&INC`CHARGEN`SUBMIT`NONE [u(cobj,csys)]=@attach %!/INC`MSG=ERROR: No Mode selected!
+
+&Q`GET`MECHA`NAME [u(cobj,csys)]=SELECT name FROM csys_mechas where id=? LIMIT 1
+&Q`GET`PILOT`NAME [u(cobj,csys)]=SELECT name from csys_pilots where id=? LIMIT 1
+&Q`GET`PILOT`CST [u(cobj,csys)]=SELECT mel+rng+skl+aim+agi+mob+def+arm FROM csys_pilots where id=? LIMIT 1
+&Q`GET`MECHA`CST [u(cobj,csys)]=SELECT mel+rng+skl+aim+agi+mob+def+arm FROM csys_mechas where id=? LIMIT 1
+
+&INC`CHARGEN`SUBMIT`PILOT [u(cobj,csys)]=@attach %!/INC`SELECT`PILOT;@stop u(setr`%va,appsta,u(mysql,GET`PILOT`APPROVED,%q<player_id>,%q<pilot_id>))=@attach %!/INC`MSG=ERROR: [switch(%q<appsta>,1,Item is pending review.,2,Item is already approved.)];@attach %!/INC`VERIFY=WARNING: This will submit Pilot %q<pilot_id>: '[u(mysql,GET`PILOT`NAME,%q<pilot_id>)]' for approval. Are you sure? Enter the same command again within 10s to continue.,Pilot SUBMIT %q<pilot_id>;th u(setq`%va,name,u(mysql,GET`PILOT`NAME,%q<pilot_id>));th u(setq`%va,cst,u(mysql,GET`PILOT`CST,%q<pilot_id>));@attach %!/INC`DOSQL=SET`PILOT`APPROVED,1,%q<player_id>,%q<pilot_id>;@trigger/spoof u(cobj,jms)/CMD`+REQUEST`MAIN=,u(game_Config,COMBAT,JOB_CAT),PILOT APP: %q<name> (%q<cst>),Pilot %q<pilot_id>: '%q<name>' is awaiting admin approval. CST: %q<cst>
+
+&INC`CHARGEN`SUBMIT`MECHA [u(cobj,csys)]=@attach %!/INC`SELECT`PILOT;@attach %!/INC`SELECT`MECHA;@stop u(setr`%va,appsta,u(mysql,GET`MECHA`APPROVED,%q<player_id>,%q<mech_id>))=@attach %!/INC`MSG=ERROR: [switch(%q<appsta>,1,Item is pending review.,2,Item is already approved.)];@attach %!/INC`VERIFY=WARNING: This will submit Mech %q<mech_id>: '[u(mysql,GET`MECHA`NAME,%q<mech_id>)]' for approval. Are you sure? Enter the same command again within 10s to continue.,MECH SUBMIT %q<mech_id>;@attach %!/INC`DOSQL=SET`MECHA`APPROVED,1,%q<player_id>,%q<mech_id>;th u(setq`%va,name,u(mysql,GET`MECHA`NAME,%q<mech_id>));th u(setq`%va,cst,u(mysql,GET`MECHA`CST,%q<mech_id>));@trigger/spoof u(cobj,jms)/CMD`+REQUEST`MAIN=,u(game_Config,COMBAT,JOB_CAT),MECHA APP: %q<name> (%q<cst>),Mecha %q<mech_id>: '%q<name>' is awaiting admin approval.
+
+@@ +matrix section
+&INC`CHARGEN`MATRIX`MAIN [u(cobj,csys)]=@check elock(#997/Basic,%#)=@attach %!/INC`MSG=ERROR: Try as you might\, you cannot see the Matrix.;&D`MATRIX %#=not(get(%#/D`MATRIX));@attach %!/INc`MSG=You [if(get(%#/D`MATRIX),will now,will no longer)] see the Matrix.
+
+@@ ----- SQL SECTION
+
+
+&Q`INSTALL`PLAYERS [u(cobj,csys)]=CREATE TABLE IF NOT EXISTS csys_players (id BIGINT(31) UNSIGNED NOT NULL AUTO_INCREMENT,objid VARCHAR(30) NOT NULL,player_name VARCHAR(60) NOT NULL DEFAULT 'Unset',PRIMARY KEY(id),UNIQUE KEY objid (objid)) ENGINE=InnoDB DEFAULT CHARSET=latin1 AUTO_INCREMENT=1
+
+&Q`INSTALL`PILOTS [u(cobj,csys)]=CREATE TABLE IF NOT EXISTS csys_pilots (id BIGINT(31) UNSIGNED NOT NULL AUTO_INCREMENT,name VARCHAR(100) NOT NULL,creation_date DATETIME,mel SMALLINT UNSIGNED NOT NULL DEFAULT 30,rng SMALLINT UNSIGNED NOT NULL DEFAULT 30,skl SMALLINT UNSIGNED NOT NULL DEFAULT 30,aim SMALLINT UNSIGNED NOT NULL DEFAULT 30,agi SMALLINT UNSIGNED NOT NULL DEFAULT 30,mob SMALLINT UNSIGNED NOT NULL DEFAULT 30,def SMALLINT UNSIGNED NOT NULL DEFAULT 30,arm SMALLINT UNSIGNED NOT NULL DEFAULT 30,PRIMARY KEY(id)) ENGINE=InnoDB DEFAULT CHARSET=latin1 AUTO_INCREMENT=1
+
+&Q`INSTALL`PILOT_TRAITS [u(cobj,csys)]=CREATE TABLE IF NOT EXISTS csys_pilot_traits (id BIGINT(31) UNSIGNED NOT NULL AUTO_INCREMENT,pilot_id BIGINT(31) UNSIGNED NOT NULL,trait_id BIGINT(31) UNSIGNED NOT NULL,mode_id TINYINT UNSIGNED NOT NULL DEFAULT 0,PRIMARY KEY(id),FOREIGN KEY(pilot_id) REFERENCES csys_pilots(id) ON UPDATE CASCADE ON DELETE CASCADE,UNIQUE KEY ptrait (pilot_id, trait_id, mode_id)) ENGINE=InnoDB DEFAULT CHARSET=latin1 AUTO_INCREMENT=1
+
+&Q`INSTALL`PLAYER_PILOTS [u(cobj,csys)]=CREATE TABLE IF NOT EXISTS csys_player_pilots (id BIGINT(31) UNSIGNED NOT NULL AUTO_INCREMENT,player_id BIGINT(31) UNSIGNED NOT NULL,pilot_id BIGINT(31) UNSIGNED NOT NULL,approved BOOLEAN NOT NULL DEFAULT 0,PRIMARY KEY(id),FOREIGN KEY(player_id) REFERENCES csys_players(id) ON UPDATE CASCADE ON DELETE CASCADE,FOREIGN KEY(pilot_id) REFERENCES csys_pilots(id) ON UPDATE CASCADE ON DELETE CASCADE,UNIQUE KEY ppil (player_id, pilot_id)) ENGINE=InnoDB DEFAULT CHARSET=latin1 AUTO_INCREMENT=1
+
+&Q`INSTALL`MECHAS [u(cobj,csys)]=CREATE TABLE IF NOT EXISTS csys_mechas (id BIGINT(31) UNSIGNED NOT NULL AUTO_INCREMENT,name VARCHAR(100) NOT NULL,description text,creation_date DATETIME,mel SMALLINT UNSIGNED NOT NULL DEFAULT 30,rng SMALLINT UNSIGNED NOT NULL DEFAULT 30,skl SMALLINT UNSIGNED NOT NULL DEFAULT 30,aim SMALLINT UNSIGNED NOT NULL DEFAULT 30,agi SMALLINT UNSIGNED NOT NULL DEFAULT 30,mob SMALLINT UNSIGNED NOT NULL DEFAULT 30,def SMALLINT UNSIGNED NOT NULL DEFAULT 30,arm SMALLINT UNSIGNED NOT NULL DEFAULT 30,tech SMALLINT UNSIGNED NOT NULL DEFAULT 1000,tech_x BOOLEAN NOT NULL DEFAULT 0,size SMALLINT UNSIGNED,PRIMARY KEY(id)) ENGINE=InnoDB DEFAULT CHARSET=latin1 AUTO_INCREMENT=1
+
+&Q`INSTALL`MECH_TRAITS [u(cobj,csys)]=CREATE TABLE IF NOT EXISTS csys_mech_traits (id BIGINT(31) UNSIGNED NOT NULL AUTO_INCREMENT,mech_id BIGINT(31) UNSIGNED NOT NULL,trait_id BIGINT(31) UNSIGNED NOT NULL,mode_id TINYINT UNSIGNED NOT NULL DEFAULT 0,PRIMARY KEY(id),FOREIGN KEY(mech_id) REFERENCES csys_mechas(id) ON UPDATE CASCADE ON DELETE CASCADE,UNIQUE KEY mtrait (mech_id, trait_id, mode_id)) ENGINE=InnoDB DEFAULT CHARSET=latin1 AUTO_INCREMENT=1
+
+&Q`INSTALL`PLAYER_MECHS [u(cobj,csys)]=CREATE TABLE IF NOT EXISTS csys_player_mechas (id BIGINT(31) UNSIGNED NOT NULL AUTO_INCREMENT,player_id BIGINT(31) UNSIGNED NOT NULL,mech_id BIGINT(31) UNSIGNED NOT NULL,approved BOOLEAN NOT NULL DEFAULT 0,PRIMARY KEY(id),FOREIGN KEY(player_id) REFERENCES csys_players(id) ON UPDATE CASCADE ON DELETE CASCADE,FOREIGN KEY(mech_id) REFERENCES csys_mechas(id) ON UPDATE CASCADE ON DELETE CASCADE,UNIQUE KEY pmech (player_id, mech_id)) ENGINE=InnoDB DEFAULT CHARSET=latin1 AUTO_INCREMENT=1
+
+&Q`INSTALL`ATTACKS [u(cobj,csys)]=CREATE TABLE IF NOT EXISTS csys_attacks (id BIGINT(31) UNSIGNED NOT NULL AUTO_INCREMENT,mech_id BIGINT(31) UNSIGNED NOT NULL,name VARCHAR(100) NOT NULL,level TINYINT UNSIGNED NOT NULL DEFAULT 0,signature BOOLEAN NOT NULL DEFAULT 0,type_id TINYINT UNSIGNED NOT NULL DEFAULT 0,mechanism_id TINYINT UNSIGNED NOT NULL DEFAULT 0,PRIMARY KEY(id),UNIQUE KEY mattack (mech_id,name),FOREIGN KEY(mech_id) REFERENCES csys_mechas(id) ON UPDATE CASCADE ON DELETE CASCADE) ENGINE=InnoDB DEFAULT CHARSET=latin1 AUTO_INCREMENT=1
+
+&Q`INSTALL`FREEATTACKS [u(cobj,csys)]=CREATE TABLE IF NOT EXISTS csys_free_attacks (id BIGINT(31) UNSIGNED NOT NULL AUTO_INCREMENT,link_id BIGINT(31) UNSIGNED NOT NULL,name VARCHAR(100) NOT NULL,level TINYINT UNSIGNED NOT NULL DEFAULT 0,signature BOOLEAN NOT NULL DEFAULT 0,type_id TINYINT UNSIGNED NOT NULL DEFAULT 0,mechanism_id TINYINT UNSIGNED NOT NULL DEFAULT 0,PRIMARY KEY(id),UNIQUE KEY fattack (link_id,name),FOREIGN KEY(link_id) REFERENCES csys_player_mechas(id) ON UPDATE CASCADE ON DELETE CASCADE) ENGINE=InnoDB DEFAULT CHARSET=latin1 AUTO_INCREMENT=1
+
+&Q`INSTALL`ATTACK_EFFECTS [u(cobj,csys)]=CREATE TABLE IF NOT EXISTS csys_attack_effects (id BIGINT(31) UNSIGNED NOT NULL AUTO_INCREMENT,attack_id BIGINT(31) UNSIGNED NOT NULL,effect_id TINYINT UNSIGNED NOT NULL,PRIMARY KEY(id),FOREIGN KEY(attack_id) REFERENCES csys_attacks(id) ON UPDATE CASCADE ON DELETE CASCADE,UNIQUE KEY aeffect (attack_id,effect_id)) ENGINE=InnoDB DEFAULT CHARSET=latin1 AUTO_INCREMENT=1
+
+&Q`INSTALL`FREE_EFFECTS [u(cobj,csys)]=CREATE TABLE IF NOT EXISTS csys_free_effects (id BIGINT(31) UNSIGNED NOT NULL AUTO_INCREMENT,attack_id BIGINT(31) UNSIGNED NOT NULL,effect_id TINYINT UNSIGNED NOT NULL,PRIMARY KEY(id),FOREIGN KEY(attack_id) REFERENCES csys_free_attacks(id) ON UPDATE CASCADE ON DELETE CASCADE,UNIQUE KEY feffect (attack_id,effect_id)) ENGINE=InnoDB DEFAULT CHARSET=latin1 AUTO_INCREMENT=1
+
+&Q`INSTALL`SELECT [u(cobj,csys)]=CREATE TABLE IF NOT EXISTS csys_select (id BIGINT(31) UNSIGNED NOT NULL,player_id BIGINT(31) UNSIGNED,pilot_id BIGINT(31) UNSIGNED,mech_id BIGINT(31) UNSIGNED,attack_id BIGINT(31) UNSIGNED,UNIQUE KEY(id),FOREIGN KEY(id) REFERENCES csys_players(id) ON UPDATE CASCADE ON DELETE CASCADE,FOREIGN KEY(player_id) REFERENCES csys_players(id) ON UPDATE CASCADE ON DELETE SET NULL,FOREIGN KEY(pilot_id) REFERENCES csys_pilots(id) ON UPDATE CASCADE ON DELETE SET NULL,FOREIGN KEY(mech_id) REFERENCES csys_mechas(id) ON UPDATE CASCADE ON DELETE SET NULL,FOREIGN KEY(attack_id) REFERENCES csys_attacks(id) ON UPDATE CASCADE ON DELETE SET NULL) ENGINE=InnoDB DEFAULT CHARSET=latin1 AUTO_INCREMENT=1
+
+&Q`INSTALL`MP_MECHA [u(cobj,csys)]=CREATE TABLE IF NOT EXISTS csys_mp_mecha (id BIGINT(31) UNSIGNED NOT NULL,lock_obj VARCHAR(30),FOREIGN KEY(id) REFERENCES csys_mechas(id) ON UPDATE CASCADE ON DELETE CASCADE,UNIQUE KEY(id)) ENGINE=InnoDB DEFAULT CHARSET=latin1 AUTO_INCREMENT=1
+
+&Q`INSTALL`GENERIC_PILOT [u(cobj,csys)]=CREATE TABLE IF NOT EXISTS csys_generic_pilot (id BIGINT(31) UNSIGNED NOT NULL,lock_obj VARCHAR(30),FOREIGN KEY(id) REFERENCES csys_pilots(id) ON UPDATE CASCADE ON DELETE CASCADE,UNIQUE KEY(id)) ENGINE=InnoDB DEFAULT CHARSET=latin1 AUTO_INCREMENT=1
+
+&SQL`TABLES [u(cobj,csys)]=PLAYERS|PILOTS|PILOT_TRAITS|PLAYER_PILOTS|MECHAS|MECH_TRAITS|PLAYER_MECHS|ATTACKS|FREEATTACKS|FREE_EFFECTS|ATTACK_EFFECTS|SELECT|MP_MECHA|GENERIC_PILOT
+&SQL`TABLE`PLAYERS [u(cobj,csys)]=csys_players
+&SQL`TABLE`PILOTS [u(cobj,csys)]=csys_pilots
+&SQL`TABLE`PILOT_TRAITS [u(cobj,csys)]=csys_pilot_traits
+&SQL`TABLE`PLAYER_PILOTS [u(cobj,csys)]=csys_player_pilots
+&SQL`TABLE`MECHAS [u(cobj,csys)]=csys_mechas
+&SQL`TABLE`MECH_TRAITS [u(cobj,csys)]=csys_mech_traits
+&SQL`TABLE`PLAYER_MECHS [u(cobj,csys)]=csys_player_mechas
+&SQL`TABLE`ATTACKS [u(cobj,csys)]=csys_attacks
+&SQL`TABLE`FREEATTACKS [u(cobj,csys)]=csys_free_attacks
+&SQL`TABLE`FREE_EFFECTS [u(cobj,csys)]=csys_free_effects
+&SQL`TABLE`ATTACK_EFFECTS [u(cobj,csys)]=csys_attack_effects
+&SQL`TABLE`SELECT [u(cobj,csys)]=csys_select
+&SQL`TABLE`MP_MECHA [u(cobj,csys)]=csys_mp_mecha
+&SQL`TABLE`GENERIC_PILOT [u(cobj,csys)]=csys_generic_pilot
+
+@@ ------- DB SECTION
+
+&ABILITIES`GENERAL [u(cobj,csys)]=u(filter,TAGFILTER,edit(lattr(%!/ABIL`*),ABIL`,),%b,%b,ABIL,CATEGORIES,general)
+
+&ABILITIES`PILOT [u(cobj,csys)]=setunion(u(filter,TAGFILTER,edit(lattr(%!/ABIL`*),ABIL`,),%b,%b,ABIL,CATEGORIES,pilot),u(ABILITIES`GENERAL))
+
+&ABILITIES`MECHA [u(cobj,csys)]=setunion(u(filter,TAGFILTER,edit(lattr(%!/ABIL`*),ABIL`,),%b,%b,ABIL,CATEGORIES,mecha),u(ABILITIES`GENERAL))
+
+
+@@ GENERAL
+&ABIL`1 [u(cobj,csys)]=Attacker
+&ABIL`1`CATEGORIES [u(cobj,csys)]=precalc pilot
+&ABIL`1`ALL_ATTACK`MULTIPLIER [u(cobj,csys)]=mul(0.15,%1)
+
+&ABIL`2 [u(cobj,csys)]=Defender
+&ABIL`2`CATEGORIES [u(cobj,csys)]=precalc pilot
+&ABIL`2`ALL_DEFENSE`MULTIPLIER [u(cobj,csys)]=mul(0.15,%1)
+
+&ABIL`3 [u(cobj,csys)]=Sniper
+&ABIL`3`ALL_ATTACK [u(cobj,csys)]=3
+&ABIL`3`CATEGORIES [u(cobj,csys)]=precalc pilot
+&ABIL`3`ALL_ATTACK`MULTIPLIER [u(cobj,csys)]=mul(0.07,%1)
+
+&ABIL`4 [u(cobj,csys)]=Eluder
+&ABIL`4`ALL_DEFENSE [u(cobj,csys)]=3
+&ABIL`4`CATEGORIES [u(cobj,csys)]=precalc pilot
+&ABIL`4`ALL_DEFENSE`MULTIPLIER [u(cobj,csys)]=mul(0.07,%1)
+
+@@ PILOT
+&ABIL`5 [u(cobj,csys)]=Concentration
+&ABIL`5`CATEGORIES [u(cobj,csys)]=attack defense pilot
+&ABIL`5`TRIGGER [u(cobj,csys)]=not(words(get(%0/D`COMBAT`ACTIVE_EFFECTS`DEBUFFS)))
+&ABIL`5`ATTACK [u(cobj,csys)]=if(u(ABIL`5`TRIGGER,%0),6,0)
+&ABIL`5`DEFENSE [u(cobj,csys)]=if(u(ABIL`5`TRIGGER,%0),6,0)
+
+&ABIL`7 [u(cobj,csys)]=Impulsive
+&ABIL`7`CATEGORIES [u(cobj,csys)]=pilot
+&ABIL`7`BOOSTS [u(cobj,csys)]=2
+
+&ABIL`8 [u(cobj,csys)]=Old World Blues
+&ABIL`8`CATEGORIES [u(cobj,csys)]=precalc pilot
+&ABIL`8`PRECALC [u(cobj,csys)]=@select/inline u(ABIL`8`TRIGGER,%0)=1,{&D`COMBAT`TECHBONUS %0=1}
+&ABIL`8`TRIGGER [u(cobj,csys)]=t(match(D E F,get(%0/D`COMBAT`TECHLETTER)))
+&ABIL`8`ALL_ATTACK [u(cobj,csys)]=if(u(ABIL`8`TRIGGER,%0),5,0)
+&ABIL`8`ALL_DEFENSE [u(cobj,csys)]=if(u(ABIL`8`TRIGGER,%0),5,0)
+
+&ABIL`9 [u(cobj,csys)]=Ace Customizer
+&ABIL`9`CATEGORIES [u(cobj,csys)]=precalc health pilot
+&ABIL`9`ALL_ATTACK [u(cobj,csys)]=if(u(ABIL`9`TRIGGER,%0),2,0)
+&ABIL`9`ALL_DEFENSE [u(cobj,csys)]=if(u(ABIL`9`TRIGGER,%0),2,0)
+&ABIL`9`HEALTH [u(cobj,csys)]=if(u(ABIL`9`TRIGGER,%0),1500,0)
+&ABIL`9`TRIGGER [u(cobj,csys)]=t(match(B C,get(%0/D`COMBAT`TECHLETTER)))
+
+&ABIL`10 [u(cobj,csys)]
+
+&ABIL`11 [u(cobj,csys)]=Hidden Depths
+&ABIL`11`CATEGORIES [u(cobj,csys)]=health_50 pilot
+&ABIL`11`HEALTH_50 [u(cobj,csys)]=@attach %!/INC`ADDBOOST=%0,3,Your power swells and surges from deep within!
+
+&ABIL`12 [u(cobj,csys)]=Dauntless
+&ABIL`12`CATEGORIES [u(cobj,csys)]=attack pilot
+&ABIL`12`ATTACK [u(cobj,csys)]=u(healthbonus,%0)
+
+&ABIL`13 [u(cobj,csys)]=Determined
+&ABIL`13`CATEGORIES [u(cobj,csys)]=defense pilot
+&ABIL`13`DEFENSE [u(cobj,csys)]=u(healthbonus,%0)
+
+&ABIL`14 [u(cobj,csys)]=Demanding
+&ABIL`14`CATEGORIES [u(cobj,csys)]=precalc pilot
+&ABIL`14`STEADY [u(cobj,csys)]=5
+&ABIL`14`AVOID [u(cobj,csys)]=3
+&ABIL`14`BLOCK [u(cobj,csys)]=0.1
+&ABIL`14`COOL [u(cobj,csys)]=5
+
+&ABIL`15 [u(cobj,csys)]=Driven
+&ABIL`15`CATEGORIES [u(cobj,csys)]=health_75 health_25 pilot
+&ABIL`15`HEALTH_75 [u(cobj,csys)]=@attach %!/INC`ADDBOOST=%0,2,You refuse to fall here!
+&ABIL`15`HEALTH_25 [u(cobj,csys)]=@attach %!/INC`ADDBOOST=%0,1,Give them your all!
+
+@@ MECHA
+
+&ABIL`6 [u(cobj,csys)]=Expanded Loadout
+&ABIL`6`CATEGORIES [u(cobj,csys)]=precalc mecha
+&ABIL`6`ALL_ATTACK`MULTIPLIER [u(cobj,csys)]=0.1
+&ABIl`6`SPECIAL [u(cobj,csys)]=2
+
+&ABIL`16 [u(cobj,csys)]=Tough
+&ABIL`16`CATEGORIES [u(cobj,csys)]=precalc health mecha
+&ABIL`16`HEALTH [u(cobj,csys)]=2500
+&ABIL`16`ALL_DEFENSE`MULTIPLIER [u(cobj,csys)]=0.1
+
+&ABIL`17 [u(cobj,csys)]
+
+&ABIL`18 [u(cobj,csys)]=Versatile Combatant
+&ABIL`18`CATEGORIES [u(cobj,csys)]=precalc mecha ratio postcalc
+&ABIL`18`FREE_ATTACK`MULTIPLIER [u(cobj,csys)]=0.1
+&ABIL`18`POSTCALC [u(cobj,csys)]=@@ We'll see what this does later.
+
+&ABIL`19 [u(cobj,csys)]=Experimental
+&ABIL`19`CATEGORIES [u(cobj,csys)]=load attack defense mecha
+&ABIL`19`ATTACK [u(cobj,csys)]=switch(randword(A A B),A,8,B,-2)
+&ABIL`19`DEFENSE [u(cobj,csys)]=switch(randword(A A B),A,8,B,-2)
+
+&ABIL`20 [u(cobj,csys)]=Melee Specialist
+&ABIL`20`CATEGORIES [u(cobj,csys)]=precalc mecha
+&ABIL`20`MELEE_ATTACK [u(cobj,csys)]=8
+&ABIL`20`MELEE_DEFENSE [u(cobj,csys)]=8
+&ABIL`20`RANGED_ATTACK [u(cobj,csys)]=-4
+&ABIL`20`RANGED_DEFENSE [u(cobj,csys)]=-4
+
+&ABIL`21 [u(cobj,csys)]=Ranged Specialist
+&ABIL`21`CATEGORIES [u(cobj,csys)]=precalc mecha
+&ABIL`21`MELEE_ATTACK [u(cobj,csys)]=-4
+&ABIL`21`MELEE_DEFENSE [u(cobj,csys)]=-4
+&ABIL`21`RANGED_ATTACK [u(cobj,csys)]=8
+&ABIL`21`RANGED_DEFENSE [u(cobj,csys)]=8
+
+&ABIL`22 [u(cobj,csys)]=Offense Focus
+&ABIL`22`CATEGORIES [u(cobj,csys)]=precalc mecha
+&ABIL`22`ALL_ATTACK [u(cobj,csys)]=15
+&ABIL`22`ALL_DEFENSE [u(cobj,csys)]=-5
+
+&ABIL`23 [u(cobj,csys)]=Defense Focus
+&ABIL`23`CATEGORIES [u(cobj,csys)]=precalc mecha
+&ABIL`23`ALL_ATTACK [u(cobj,csys)]=-5
+&ABIL`23`ALL_DEFENSE [u(cobj,csys)]=15
+
+&ABIL`24 [u(cobj,csys)]=Cool Running
+&ABIL`24`CATEGORIES [u(cobj,csys)]=precalc mecha
+&ABIL`24`HEAT_COST [u(cobj,csys)]=-10
+&ABIL`24`HEAT_PENALTY_MULTIPLIER [u(cobj,csys)]=3
+&ABIL`24`COOL [u(cobj,csys)]=-15
+
+&ABIL`25 [u(cobj,csys)]=Heat Sinks
+&ABIL`25`CATEGORIES [u(cobj,csys)]=mecha precalc
+&ABIL`25`HEAT_DISSIPATE [u(cobj,csys)]=5
+
+&ABIL`27 [u(cobj,csys)]=Physical Specialist
+&ABIL`27`CATEGORIES [u(cobj,csys)]=precalc mecha
+&ABIL`27`1_ATTACK [u(cobj,csys)]=8
+&ABIL`27`1_ATTACK`MULTIPLIER [u(cobj,csys)]=0.05
+
+&ABIL`28 [u(cobj,csys)]=Physical Resist
+&ABIL`28`CATEGORIES [u(cobj,csys)]=precalc mecha
+&ABIL`28`TYPEGUARD [u(cobj,csys)]=1
+
+&ABIL`29 [u(cobj,csys)]=Energy Specialist
+&ABIL`29`CATEGORIES [u(cobj,csys)]=precalc mecha
+&ABIL`29`2_ATTACK [u(cobj,csys)]=8
+&ABIL`29`2_ATTACK`MULTIPLIER [u(cobj,csys)]=0.05
+
+&ABIL`30 [u(cobj,csys)]=Energy Resist
+&ABIL`30`CATEGORIES [u(cobj,csys)]=precalc mecha
+&ABIL`30`TYPEGUARD [u(cobj,csys)]=2
+
+&ABIL`31 [u(cobj,csys)]=Force Specialist
+&ABIL`31`CATEGORIES [u(cobj,csys)]=precalc mecha
+&ABIL`31`3_ATTACK [u(cobj,csys)]=8
+&ABIL`31`3_ATTACK`MULTIPLIER [u(cobj,csys)]=0.05
+
+&ABIL`32 [u(cobj,csys)]=Force Resist
+&ABIL`32`CATEGORIES [u(cobj,csys)]=precalc mecha
+&ABIL`32`TYPEGUARD [u(cobj,csys)]=3
+
+&ABIL`33 [u(cobj,csys)]=Blast Specialist
+&ABIL`33`CATEGORIES [u(cobj,csys)]=precalc mecha
+&ABIL`33`4_ATTACK [u(cobj,csys)]=8
+&ABIL`33`4_ATTACK`MULTIPLIER [u(cobj,csys)]=0.05
+
+&ABIL`34 [u(cobj,csys)]=Blast Resist
+&ABIL`34`CATEGORIES [u(cobj,csys)]=precalc mecha
+&ABIL`34`TYPEGUARD [u(cobj,csys)]=4
+
+&ABIL`35 [u(cobj,csys)]
+&ABIL`36 [u(cobj,csys)]
+
+@@ PILOT
+&ABIL`37 [u(cobj,csys)]=Lucky
+&ABIL`37`CATEGORIES [u(cobj,csys)]=precalc pilot
+&ABIL`37`ALL_ATTACK [u(cobj,csys)]=2
+&ABIL`37`ALL_DEFENSE [u(cobj,csys)]=2
+&ABIL`37`ALL_ATTACK`MULTIPLIER [u(cobj,csys)]=0.05
+&ABIL`37`ALL_DEFENSE`MULTIPLIER [u(cobj,csys)]=0.05
+
+@@ MECHA
+&ABIL`38 [u(cobj,csys)]=Focused
+&ABIL`38`CATEGORIES [u(cobj,csys)]=precalc pilot
+&ABIL`38`ALL_ATTACK [u(cobj,csys)]=7
+
+&ABIL`39 [u(cobj,csys)]=Reflexive
+&ABIL`39`CATEGORIES [u(cobj,csys)]=precalc pilot
+&ABIL`39`ALL_DEFENSE [u(cobj,csys)]=7
+
+&ABIL`40 [u(cobj,csys)]=Black Box
+&ABIL`40`CATEGORIES [u(cobj,csys)]=precalc mecha
+&ABIL`40`BOOSTS [u(cobj,csys)]=2
+
+&ABIL`41 [u(cobj,csys)]=Limiter Release
+&ABIL`41`CATEGORIES [u(cobj,csys)]=attack mecha
+&ABIL`41`ATTACK`MULTIPLIER [u(cobj,csys)]=if(lt(u(percent,%0),0.5),0.3,0)
+
+&ABIL`42 [u(cobj,csys)]=Ablative Armor
+&ABIL`42`CATEGORIES [u(cobj,csys)]=defense mecha
+&ABIL`42`DEFENSE`MULTIPLIER [u(cobj,csys)]=if(gte(u(percent,%0),0.5),0.3,0)
+
+&ABIL`43 [u(cobj,csys)]=Assault Frame
+&ABIL`43`CATEGORIES [u(cobj,csys)]=precalc mecha
+&ABIL`43`ALL_ATTACK`MULTIPLIER [u(cobj,csys)]=0.3
+&ABIL`43`ALL_DEFENSE`MULTIPLIER [u(cobj,csys)]=-0.1
+
+
+&TYPE`1 [u(cobj,csys)]=Physical
+&TYPE`2 [u(cobj,csys)]=Energy
+&TYPE`3 [u(cobj,csys)]=Force
+&TYPE`4 [u(cobj,csys)]=Blast
+&TYPE`5 [u(cobj,csys)]
+
+
+&MECHANISM`1 [u(cobj,csys)]=Cut
+&MECHANISM`1`CATEGORIES [u(cobj,csys)]=melee
+&MECHANISM`1`MODE [u(cobj,csys)]=MELEE
+&MECHANISM`1`ATTACK [u(cobj,csys)]=2
+
+&MECHANISM`2 [u(cobj,csys)]=Impact
+&MECHANISM`2`CATEGORIES [u(cobj,csys)]=melee
+&MECHANISM`2`MODE [u(cobj,csys)]=MELEE
+&MECHANISM`2`ATTACK`MULTIPLIER [u(cobj,csys)]=0.05
+
+&MECHANISM`3 [u(cobj,csys)]=Shot
+&MECHANISM`3`CATEGORIES [u(cobj,csys)]=ranged
+&MECHANISM`3`MODE [u(cobj,csys)]=RANGED
+&MECHANISM`3`ATTACK [u(cobj,csys)]=2
+
+&MECHANISM`4 [u(cobj,csys)]=Missile
+&MECHANISM`4`CATEGORIES [u(cobj,csys)]=ranged
+&MECHANISM`4`MODE [u(cobj,csys)]=RANGED
+&MECHANISM`4`ATTACK`MULTIPLIER [u(cobj,csys)]=0.05
+
+&MECHANISM`5 [u(cobj,csys)]=Remote
+&MECHANISM`5`CATEGORIES [u(cobj,csys)]=ranged exotic
+&MECHANISM`5`MODE [u(cobj,csys)]=RANGED
+&MECHANISM`5`ATTACK [u(cobj,csys)]=2
+
+&MECHANISM`6 [u(cobj,csys)]=Burst
+&MECHANISM`6`CATEGORIES [u(cobj,csys)]=melee exotic
+&MECHANISM`6`MODE [u(cobj,csys)]=MELEE
+&MECHANISM`6`ATTACK`MULTIPLIER [u(cobj,csys)]=0.05
+
+@@ 2.0
+
+&EFFECTS`SIGNATURE [u(cobj,csys)]=u(filter,TAGFILTER,edit(lattr(%!/EFFECT`*),EFFECT`,),%b,%b,EFFECT,CATEGORIES,signature)
+
+&EFFECTS`SPECIAL [u(cobj,csys)]=u(filter,TAGFILTER,edit(lattr(%!/EFFECT`*),EFFECT`,),%b,%b,EFFECT,CATEGORIES,special)
+
+&EFFECTS`FREE [u(cobj,csys)]=u(filter,TAGFILTER,edit(lattr(%!/EFFECT`*),EFFECT`,),%b,%b,EFFECT,CATEGORIES,free)
+
+&EFFECTS`GAMBLE [u(cobj,csys)]=u(filter,TAGFILTER,edit(lattr(%!/EFFECT`*),EFFECT`,),%b,%b,EFFECT,CATEGORIES,gamble)
+&EFFECTS`IMPROVISATION [u(cobj,csys)]=u(filter,TAGFILTER,edit(lattr(%!/EFFECT`*),EFFECT`,),%b,%b,EFFECT,CATEGORIES,improvisation)
+
+&EFFECTS`IMPROVISATION`PICK [u(cobj,csys)]=elements(shuffle(u(EFFECTS`IMPROVISATION)),1 2)
+&EFFECTS`GAMBLE`PICK [u(cobj,csys)]=elements(shuffle(u(EFFECTS`GAMBLE)),1 2 3 4)
+
+&EFFECT`1 [u(cobj,csys)]=Interference
+&EFFECT`1`ATTACK [u(cobj,csys)]=-4
+&EFFECT`1`DEFENSE [u(cobj,csys)]=-4
+&EFFECT`1`CATEGORIES [u(cobj,csys)]=special gamble improvisation debuff target linger
+&EFFECT`1`ATTACK_TURNS [u(cobj,csys)]=2
+&EFFECT`1`DEFENSE_TURNS [u(cobj,csys)]=2
+
+&EFFECT`2 [u(cobj,csys)]=Malfunction
+&EFFECT`2`ATTACK`MULTIPLIER [u(cobj,csys)]=-0.15
+&EFFECT`2`CATEGORIES [u(cobj,csys)]=special gamble improvisation debuff target linger
+&EFFECT`2`ATTACK_TURNS [u(cobj,csys)]=2
+
+&EFFECT`3 [u(cobj,csys)]=Ensnare
+&EFFECT`3`DEFENSE [u(cobj,csys)]=-6
+&EFFECT`3`CATEGORIES [u(cobj,csys)]=special gamble improvisation debuff target linger
+&EFFECT`3`DEFENSE_TURNS [u(cobj,csys)]=2
+
+&EFFECT`4 [u(cobj,csys)]=Jamming
+&EFFECT`4`ATTACK [u(cobj,csys)]=-6
+&EFFECT`4`ATTACK_TURNS [u(cobj,csys)]=2
+&EFFECT`4`CATEGORIES [u(cobj,csys)]=special gamble improvisation debuff target linger
+
+&EFFECT`5 [u(cobj,csys)]=Aimed
+&EFFECT`5`CATEGORIES [u(cobj,csys)]=free buff self instant
+&EFFECT`5`ATTACK [u(cobj,csys)]=4
+
+&EFFECT`6 [u(cobj,csys)]=Powered
+&EFFECT`6`CATEGORIES [u(cobj,csys)]=free buff self instant
+&EFFECT`6`ATTACK`MULTIPLIER [u(cobj,csys)]=0.1
+
+&EFFECT`7 [u(cobj,csys)]=Maneuver
+&EFFECT`7`CATEGORIES [u(cobj,csys)]=free buff self linger
+&EFFECT`7`DEFENSE [u(cobj,csys)]=4
+&EFFECT`7`DEFENSE_TURNS [u(cobj,csys)]=1
+
+&EFFECT`8 [u(cobj,csys)]=Cover
+&EFFECT`8`CATEGORIES [u(cobj,csys)]=free buff self linger
+&EFFECT`8`DEFENSE`MULTIPLIER [u(cobj,csys)]=0.1
+&EFFECT`8`DEFENSE_TURNS [u(cobj,csys)]=1
+
+&EFFECT`9 [u(cobj,csys)]=Arsenal
+&EFFECT`9`CATEGORIES [u(cobj,csys)]=signature self
+&EFFECT`9`AMMO [u(cobj,csys)]=2
+
+&EFFECT`10 [u(cobj,csys)]=Overheat
+&EFFECT`10`CATEGORIES [u(cobj,csys)]=special improvisation gamble target instant
+&EFFECT`10`ON_APPLY [u(cobj,csys)]=@attach %!/INC`HEAT=%0,floor(fdiv(25,default(%0/D`COMBAT`BOSS,1))),Overheat
+&EFFECT`10`ATTACK`MULTIPLIER [u(cobj,csys)]=-0.15
+
+&EFFECT`11 [u(cobj,csys)]=Disable
+&EFFECT`11`CATEGORIES [u(cobj,csys)]=special target instant
+&EFFECT`11`ATTACK`MULTIPLIER [u(cobj,csys)]=-0.15
+&EFFECT`11`ON_APPLY [u(cobj,csys)]=@select/inline strlen(u(setr`%va,distarget,randword(filterbool(#lambda/cand(get(%0/\%0`SPECIAL),nor(get(%0/\%0`SIGNATURE),get(%0/\%0`FREE)),gt(get(%0/\%0`AMMO),get(%0/\%0`USES))),lattr(%0/D`COMBAT`ATTACKS`*)))))=>0,{th u(addto,%0,%q<distarget>`USES,1);@remit %l=[ansi(hg,COMBAT:)] [u(moniker`%va,%0)]'s [ansi(h,get(%0/%q<distarget>))] attack system suffered a disabling strike! -1 Ammo!},0,{@remit %l=[ansi(hg,COMBAT:)] Disable failed! [u(moniker`%va,%0)] has no ammo to deplete!};
+
+@@ Steady is for reaction commands.
+&EFFECT`12 [u(cobj,csys)]=Steady
+&EFFECT`12`CATEGORIES [u(cobj,csys)]=self buff linger
+&EFFECT`12`ATTACK_TURNS [u(cobj,csys)]=1
+&EFFECT`12`ATTACK [u(cobj,csys)]=u(%0/D`COMBAT`DEFENSE`STEADY)
+
+@@ 2.0 Effects
+&EFFECT`13 [u(cobj,csys)]=Chaff
+&EFFECT`13`ATTACK [u(cobj,csys)]=-2
+&EFFECT`13`DEFENSE [u(cobj,csys)]=-2
+&EFFECT`13`CATEGORIES [u(cobj,csys)]=debuff target free linger
+&EFFECT`13`ATTACK_TURNS [u(cobj,csys)]=2
+&EFFECT`13`DEFENSE_TURNS [u(cobj,csys)]=2
+
+&EFFECT`14 [u(cobj,csys)]=Expose
+&EFFECT`14`CATEGORIES [u(cobj,csys)]=debuff target special linger
+&EFFECT`14`DEFENSE`MULTIPLIER [u(cobj,csys)]=-0.15
+&EFFECT`14`DEFENSE_TURNS [u(cobj,csys)]=2
+
+&EFFECT`15 [u(cobj,csys)]=Gunfight
+&EFFECT`15`CATEGORIES [u(cobj,csys)]=debuff target special linger
+&EFFECT`15`ATTACK [u(cobj,csys)]=switch(default(%!/MECHANISM`[get(%0/%1`MECHANISM)]`MODE,MELEE),MELEE,-20,0)
+&EFFECT`15`ATTACK_TURNS [u(cobj,csys)]=2
+
+&EFFECT`16 [u(cobj,csys)]=Zero Range
+&EFFECT`16`CATEGORIES [u(cobj,csys)]=debuff target special linger
+&EFFECT`16`ATTACK [u(cobj,csys)]=switch(default(%!/MECHANISM`[get(%0/%1`MECHANISM)]`MODE,MELEE),RANGED,-20,0)
+&EFFECT`16`ATTACK_TURNS [u(cobj,csys)]=2
+
+&EFFECT`17 [u(cobj,csys)]=Scorch
+&EFFECT`17`CATEGORIES [u(cobj,csys)]=debuff target special linger
+&EFFECT`17`ON_APPLY [u(cobj,csys)]=th u(addto,%0,D`COMBAT`HEAT`DISSIPATE,-10)
+&EFFECT`17`ON_REMOVE [u(cobj,csys)]=th u(addto,%0,D`COMBAT`HEAT`DISSIPATE,10)
+&EFFECT`17`DEFENSE_TURNS [u(cobj,csys)]=2
+
+&EFFECT`18 [u(cobj,csys)]=Improvisation
+&EFFECT`18`CATEGORIES [u(cobj,csys)]=priority special self
+&EFFECT`18`PRIORITY [u(cobj,csys)]=th u(setq`%va,extraeff,u(EFFECTS`IMPROVISATION`PICK))
+
+&EFFECT`19 [u(cobj,csys)]=Charged
+&EFFECT`19`CATEGORIES [u(cobj,csys)]=self buff special instant
+&EFFECT`19`ATTACK`MULTIPLIER [u(cobj,csys)]=0.2
+
+&EFFECT`20 [u(cobj,csys)]=Guided
+&EFFECT`20`CATEGORIES [u(cobj,csys)]=self buff special instant
+&EFFECT`20`ATTACK [u(cobj,csys)]=8
+
+&EFFECT`21 [u(cobj,csys)]=Evasive
+&EFFECT`21`CATEGORIES [u(cobj,csys)]=self buff special linger
+&EFFECT`21`DEFENSE [u(cobj,csys)]=8
+&EFFECT`21`DEFENSE_TURNS [u(cobj,csys)]=1
+
+&EFFECT`22 [u(cobj,csys)]=Bulwark
+&EFFECT`22`CATEGORIES [u(cobj,csys)]=self buff special linger
+&EFFECT`22`DEFENSE`MULTIPLIER [u(cobj,csys)]=0.2
+&EFFECT`22`DEFENSE_TURNS [u(cobj,csys)]=1
+
+&EFFECT`23 [u(cobj,csys)]=Refined
+&EFFECT`23`CATEGORIES [u(cobj,csys)]=self buff special linger
+&EFFECT`23`ATTACK [u(cobj,csys)]=4
+&EFFECT`23`ATTACK`MULTIPLIER [u(cobj,csys)]=0.1
+&EFFECT`23`ATTACK_TURNS [u(cobj,csys)]=1
+
+&EFFECT`24 [u(cobj,csys)]=Guarded
+&EFFECT`24`CATEGORIES [u(cobj,csys)]=self buff special linger
+&EFFECT`24`DEFENSE [u(cobj,csys)]=4
+&EFFECT`24`DEFENSE`MULTIPLIER [u(cobj,csys)]=0.1
+&EFFECT`24`DEFENSE_TURNS [u(cobj,csys)]=1
+
+&EFFECT`25 [u(cobj,csys)]=Heat-Seeking
+&EFFECT`25`CATEGORIES [u(cobj,csys)]=self buff special runtime
+&EFFECT`25`ATTACK [u(cobj,csys)]=[null(if(gte(get(%0/D`COMBAT`HEAT),100),u(setq`%va,autores,1.0)))][switch(u(heatstatus,%0),Cool,0,Warm,5,Critical,10,10)]
+
+&EFFECT`26 [u(cobj,csys)]=Hyper
+&EFFECT`26`CATEGORIES [u(cobj,csys)]=self buff signature instant
+&EFFECT`26`ATTACK`MULTIPLIER [u(cobj,csys)]=0.3
+
+&EFFECT`27 [u(cobj,csys)]=Lock-On
+&EFFECT`27`CATEGORIES [u(cobj,csys)]=self buff signature instant
+&EFFECT`27`ATTACK [u(cobj,csys)]=12
+
+&EFFECT`28 [u(cobj,csys)]=Afterimage
+&EFFECT`28`CATEGORIES [u(cobj,csys)]=self buff signature linger
+&EFFECT`28`DEFENSE [u(cobj,csys)]=12
+&EFFECT`28`DEFENSE_TURNS [u(cobj,csys)]=1
+
+&EFFECT`29 [u(cobj,csys)]=Redoubt
+&EFFECT`29`CATEGORIES [u(cobj,csys)]=self buff signature linger
+&EFFECT`29`DEFENSE`MULTIPLIER [u(cobj,csys)]=0.3
+&EFFECT`29`DEFENSE_TURNS [u(cobj,csys)]=1
+
+&EFFECT`30 [u(cobj,csys)]=Meltdown
+&EFFECT`30`CATEGORIES [u(cobj,csys)]=target debuff signature instant
+&EFFECT`30`ON_APPLY [u(cobj,csys)]=@attach %!/INC`HEAT=%0,floor(fdiv(40,default(%0/D`COMBAT`BOSS,1))),Meltdown
+&EFFECT`30`ATTACK`MULTIPLIER [u(cobj,csys)]=-0.15
+
+&EFFECT`31 [u(cobj,csys)]=Gamble
+&EFFECT`31`CATEGORIES [u(cobj,csys)]=priority signature self
+&EFFECT`31`PRIORITY [u(cobj,csys)]=th u(setq`%va,extraeff,u(EFFECTS`GAMBLE`PICK))
+
+&EFFECT`32 [u(cobj,csys)]=Exhilarate
+&EFFECT`32`CATEGORIES [u(cobj,csys)]=signature self buff instant
+&EFFECT`32`ON_APPLY [u(cobj,csys)]=@select/inline cand(strlen(u(setr`%va,boostid,randword(get(%0/D`COMBAT`BOOSTS`USED),|))),gt(after(%q<boostid>,~),0))=>0,{@pemit %#=[ansi(hg,COMBAT:)] Your fighting spirit soars! Regained a Boost Charge for: [ansi(h,v(BOOST`[before(%q<boostid>,~)]))]!;th u(setstat,%0,D`COMBAT`BOOSTS`USED,before(%q<boostid>,~),sub(after(%q<boostid>,~),1));th u(setstat,%0,D`COMBAT`BOOSTS,before(%q<boostid>,~),add(u(getstat,%0,D`COMBAT`BOOSTS,before(%q<boostid>,~)),1))},0,{@pemit %#=[ansi(hg,COMBAT:)] Your fighting spirit soars\, but there are no Boosts to recharge.}
+
+&REMOVE_DEBUFFS [u(cobj,csys)]=@dolist/inline get(%0/D`COMBAT`ACTIVE_EFFECTS`DEBUFFS)={@dolist/inline ACTIVE_EFFECTS ACTIVE_EFFECTS`DEBUFFS ACTIVE_EFFECTS`BUFFS={&D`COMBAT`%i0 %0=setdiff(get(%0/D`COMBAT`%i0),%i1)};@dolist/inline ACTIVE_EFFECTS`ATTACK ACTIVE_EFFECTS`DEFENSE={th u(delstat,%0,D`COMBAT`%i0,%i1)}}
+
+@@ 1.0 Boosts
+&BOOSTS [u(cobj,csys)]=lnum(1,15)
+&BOOSTS`TRUST [u(cobj,csys)]=elements(shuffle(setdiff(u(BOOSTS),13)),1 2)
+
+&BOOST`1 [u(cobj,csys)]=Reboot
+&BOOST`1`ACTIVATE [u(cobj,csys)]=@attach %!/INC`HEAL=%0,ceil(mul(get(%0/D`COMBAT`HEALTH),0.1)),Reboot;@attach %!/REMOVE_DEBUFFS=%0
+
+&BOOST`2 [u(cobj,csys)]=Flush
+&BOOST`2`ACTIVATE [u(cobj,csys)]=@attach %!/INC`HEAL=%0,ceil(mul(get(%0/D`COMBAT`HEALTH),0.1)),Flush;@attach %!/INC`COOL=%0,15,Flush
+
+&BOOST`3 [u(cobj,csys)]=Vent
+&BOOST`3`ACTIVATE [u(cobj,csys)]=@attach %!/INC`COOL=%0,30,Vent
+
+&BOOST`4 [u(cobj,csys)]=Guard
+&BOOST`4`ACTIVATE [u(cobj,csys)]=@attach %!/INC`SETBOOST=%0,4
+&BOOST`4`DEFENSE_TURNS [u(cobj,csys)]=2
+&BOOST`4`DEFENSE`MULTIPLIER [u(cobj,csys)]=0.25
+
+&BOOST`5 [u(cobj,csys)]=Focus
+&BOOST`5`ACTIVATE [u(cobj,csys)]=@attach %!/INC`SETBOOST=%0,5
+&BOOST`5`ATTACK_TURNS [u(cobj,csys)]=2
+&BOOST`5`ATTACK`MULTIPLIER [u(cobj,csys)]=0.25
+
+&BOOST`6 [u(cobj,csys)]=Reload
+&BOOST`6`ACTIVATE [u(cobj,csys)]=@dolist/inline filterbool(#lambda/cand(get(%0/\%0`SPECIAL),get(%0/\%0`USES),not(get(%0/\%0`SIGNATURE))),lattr(%0/D`COMBAT`ATTACKS`*))={&%i0`USES %0=sub(get(%0/%i0`USES),1)};@attach %!/INC`COOL=%0,15,Reload
+
+&BOOST`7 [u(cobj,csys)]=Grit
+&BOOST`7`ACTIVATE [u(cobj,csys)]=@attach %!/INC`SETBOOST=%0,7
+&BOOST`7`ATTACK_TURNS [u(cobj,csys)]=1
+&BOOST`7`ATTACK`MULTIPLIER [u(cobj,csys)]=localize(u(setq`%va,per,u(percent,%0))[if(gte(%q<per>,0.76),0.1,if(gte(%q<per>,0.51),0.2,if(gte(%q<per>,0.26),0.3,0.4)))])
+
+&BOOST`8 [u(cobj,csys)]=Override
+&BOOST`8`ACTIVATE [u(cobj,csys)]=@attach %!/INC`SETBOOST=%0,8;@attach %!/INC`HEAT=%0,25,Override
+&BOOST`8`ATTACK [u(cobj,csys)]=5
+&BOOST`8`ATTACK`MULTIPLIER [u(cobj,csys)]=0.15
+&BOOST`8`ATTACK_TURNS [u(cobj,csys)]=1
+&BOOST`8`DEFENSE [u(cobj,csys)]=-5
+&BOOST`8`DEFENSE`MULTIPLIER [u(cobj,csys)]=-0.15
+&BOOST`8`DEFENSE_TURNS [u(cobj,csys)]=1
+&BOOST`8`DEACTIVATE [u(cobj,csys)]
+
+&BOOST`9 [u(cobj,csys)]=Purge
+&BOOST`9`ACTIVATE [u(cobj,csys)]=@attach %!/INC`SETBOOST=%0,9;@attach %!/REMOVE_DEBUFFS=%0
+&BOOST`9`ATTACK [u(cobj,csys)]=5
+&BOOST`9`DEFENSE [u(cobj,csys)]=5
+&BOOST`9`ATTACK_TURNS [u(cobj,csys)]=1
+&BOOST`9`DEFENSE_TURNS [u(cobj,csys)]=1
+
+
+&BOOST`10 [u(cobj,csys)]=All-In
+&BOOST`10`ACTIVATE [u(cobj,csys)]=@attach %!/INC`SETBOOST=%0,10
+&BOOST`10`ATTACK_TURNS [u(cobj,csys)]=1
+&BOOST`10`ATTACK [u(cobj,csys)]=10
+&BOOST`10`ATTACK`MULTIPLIER [u(cobj,csys)]=0.1
+
+&BOOST`11 [u(cobj,csys)]=Go To Ground
+&BOOST`11`ACTIVATE [u(cobj,csys)]=@attach %!/INC`SETBOOST=%0,11
+&BOOST`11`DEFENSE_TURNS [u(cobj,csys)]=1
+&BOOST`11`DEFENSE [u(cobj,csys)]=10
+&BOOST`11`DEFENSE`MULTIPLIER [u(cobj,csys)]=0.1
+
+@@ 2.0 Boosts
+&BOOST`12 [u(cobj,csys)]=Closer
+&BOOST`12`ACTIVATE [u(cobj,csys)]=@attach %!/INC`SETBOOST=%0,12
+&BOOST`12`ATTACK_TURNS [u(cobj,csys)]=2
+&BOOST`12`CLOSER [u(cobj,csys)]=if(lte(u(percent,%0),0.5),0.35,0)
+
+&BOOST`13 [u(cobj,csys)]=Trust
+&BOOST`13`ACTIVATE [u(cobj,csys)]=th u(setq`%va,newboosts,u(BOOSTS`TRUST));@pemit %#=[ansi(g,COMBAT:)] Trust your instincts! Gained Effects of [ansi(h,default(%!/BOOST`[first(%q<newboosts>)],<Unknown>))] and [ansi(h,default(%!/BOOST`[last(%q<newboosts>)],<Unknown>))];@dolist/inline/nobreak %q<newboosts>={@attach %!/BOOST`%i0`ACTIVATE=%0}
+
+&BOOST`14 [u(cobj,csys)]=Stubborn
+&BOOST`14`ACTIVATE [u(cobj,csys)]=@attach %!/INC`SETBOOST=%0,14
+&BOOST`14`DEFENSE_TURNS [u(cobj,csys)]=1
+&BOOST`14`DEFENSE`MULTIPLIER [u(cobj,csys)]=switch(u(percent,%0),>0.26,0.75,>0.51,0.5,>0.76,0.25,0.1)
+
+&BOOST`15 [u(cobj,csys)]=Flicker
+&BOOST`15`ACTIVATE [u(cobj,csys)]=@attach %!/INC`SETBOOST=%0,15
+&BOOST`15`DEFENSE_TURNS [u(cobj,csys)]=1
+&BOOST`15`DEFENSE [u(cobj,csys)]=switch(u(heatstatus,%0,1),Warm,10,Critical,5,0)
+
+@@ COMBAT CODE
+
+&CMD`COMBAT [u(cobj,csys)]=$^(?s)\+(mecha|pilot|attack|free|defend|stats|sheet|reset|boost|queue|health|boss|radar)(?\:/(\S+))?(?\: +(.+?))?(?\:/(.+?)?)?(?\:=(.*))?$:th u(setq`%va,command,%1);th u(setq`%va,sysname,COMBAT);@attach %!/INC`GETSWITCH=%2;@attach %!/INC`PLAYERID=%:,1;@attach %!/INC`%q<sysname>`%q<command>`[u(strfirstof,%q<switch>,MAIN)]=%3,%4,%5
+@set [u(cobj,csys)]/CMD`COMBAT=regexp
+
+&COMBAT`FREE`PLAYER [u(cobj,csys)]=REM|CLEAR|DEL
+&COMBAT`FREE`ADMIN [u(cobj,csys)]=
+
+@@ PILOT SELECT
+&INC`COMBAT`PILOT`MAIN [u(cobj,csys)]=@select/inline strlen(%0)=0,{@attach %!/INC`COMBAT`PILOT`SHOWPILOTS},{@attach %!/INC`COMBAT`PILOT`SELECT}
+
+&INC`COMBAT`PILOT`SHOWPILOTS [u(cobj,csys)]=@check words(u(setr`%va,pilots,u(mysql3,LIST`PILOTS,%q<pid1>)),chr(176))=@attach %!/INC`MSG=ERROR: No pilots to list.;@pemit %#=u(header,Available Pilot Modes);@pemit %#=ansi(u(color`%va,%#,COLOR,COLUMN_NAMES),align(4 4 4 4 4 4 4 4 5 15 15,MEL,RNG,SKL,AIM,AGI,MOB,DEF,ARM,CST,Abilities,Boosts));@dolist/inline/nobreak/delimit [chr(176)] %q<pilots>={@pemit %#=u(separator,elements(%i0,1,chr(177)): [elements(%i0,2,chr(177))][if(not(elements(%i0,3,chr(177))),%b\(Unapproved\))][if(eq(elements(%i0,1,chr(177)),get(%#/D`CSYS`PILOT)),%b\(Active\))]);@pemit %#=align(4 4 4 4 4 4 4 4 5 15 15,elements(%i0,4,chr(177)),elements(%i0,5,chr(177)),elements(%i0,6,chr(177)),elements(%i0,7,chr(177)),elements(%i0,8,chr(177)),elements(%i0,9,chr(177)),elements(%i0,10,chr(177)),elements(%i0,11,chr(177)),lmath(add,elements(%i0,lnum(4,11),chr(177),%B)),u(FUN`LIST`PILOT`ABILITIES,elements(%i0,1,chr(177)),1),u(FUN`LIST`PILOT`BOOSTS,elements(%i0,1,chr(177)),1))};@pemit %#=u(footer)
+
+&Q`LIST`PILOTS [u(cobj,csys)]=SELECT pilot.id,pilot.name,link.approved,pilot.mel,pilot.rng,pilot.skl,pilot.aim,pilot.agi,pilot.mob,pilot.def,pilot.arm FROM csys_player_pilots as link LEFT JOIN csys_pilots as pilot ON pilot.id=link.pilot_id WHERE link.player_id=? ORDER BY pilot.name
+
+&INC`COMBAT`PILOT`SELECT [u(cobj,csys)]=@check strlen(%0)=@attach %!/INC`MSG=ERROR: No pilot name entered to select.;@check cor(u(setr`%va,pilot_id,u(mysql,FIND`PILOT,%q<pid1>,%0,%0)),u(setr`%va,pilot_id,u(mysql,FIND`PILOT`PARTIAL,%q<pid1>,sqlescape(%0),%0)))=@attach %!/INC`MSG=ERROR: Pilot '%0' not found.;@check cor(u(mysql,PILOT`APPROVED,%q<pilot_id>,%q<pid1>),elock(#997/Basic,%#),u(isadmin`%va,%#))=@attach %!/INC`MSG=ERROR: Permission denied. Pilot mode is not approved for play.;&D`CSYS`PILOT %#=%q<pilot_id>;@attach %!/INC`MSG=Pilot selected.
+
+&Q`PILOT`APPROVED [u(cobj,csys)]=SELECT link.approved from csys_player_pilots as link LEFT JOIN csys_pilots as pilot on link.pilot_id=pilot.id where pilot.id=? AND link.player_id=? LIMIT 1
+&Q`FIND`PILOT`PARTIAL [u(cobj,csys)]=SELECT pilot.id from csys_player_pilots as link LEFT JOIN csys_pilots as pilot on link.pilot_id=pilot.id WHERE link.player_id=? AND (pilot.name like '!%%' OR pilot.id=?) LIMIT 1
+
+
+@@ MECHA SELECT
+
+&INC`COMBAT`MECHA`MAIN [u(cobj,csys)]=@select/inline strlen(%0)=0,{@attach %!/INC`COMBAT`MECHA`SHOWMECHS},{@attach %!/INC`COMBAT`MECHA`SELECT}
+
+&INC`COMBAT`MECHA`SHOWMECHS [u(cobj,csys)]=@check words(u(setr`%va,mechas,u(mysql3,LIST`MECHAS,%q<pid1>)),chr(176))=@attach %!/INC`MSG=ERROR: No Mechas to list.;@pemit %#=u(header,Available Mechas);@pemit %#=ansi(u(color`%va,%#,COLOR,COLUMN_NAMES),align(4 4 4 4 4 4 4 4 5 15 15,MEL,RNG,SKL,AIM,AGI,MOB,DEF,ARM,CST,Abilities,Boosts));@dolist/inline/nobreak/delimit [chr(176)] %q<mechas>={@pemit %#=u(separator,elements(%i0,1,chr(177)): [elements(%i0,2,chr(177))][if(not(elements(%i0,3,chr(177))),%b\(Unapproved\))][if(eq(elements(%i0,1,chr(177)),get(%#/D`CSYS`MECHA)),%b\(Active\))][if(elements(%i0,14,chr(177)),%b\(MP-Model\))]);@pemit %#=align(4 4 4 4 4 4 4 4 5 15 15,elements(%i0,4,chr(177)),elements(%i0,5,chr(177)),elements(%i0,6,chr(177)),elements(%i0,7,chr(177)),elements(%i0,8,chr(177)),elements(%i0,9,chr(177)),elements(%i0,10,chr(177)),elements(%i0,11,chr(177)),lmath(add,elements(%i0,lnum(4,11),chr(177),%B)),u(FUN`LIST`MECHA`ABILITIES,elements(%i0,1,chr(177)),1),u(FUN`LIST`MECHA`BOOSTS,elements(%i0,1,chr(177)),1))};@pemit %#=u(footer)
+
+&Q`LIST`MECHAS [u(cobj,csys)]=SELECT mech.id,mech.name,link.approved,mech.mel,mech.rng,mech.skl,mech.aim,mech.agi,mech.mob,mech.def,mech.arm,mech.tech,mech.tech_x,mp.id,mech.size FROM csys_mechas as mech LEFT JOIN csys_player_mechas as link on link.mech_id=mech.id LEFT JOIN csys_mp_mecha as mp ON mp.id=mech.id WHERE link.player_id=? ORDER BY mech.name
+
+&INC`COMBAT`MECHA`SELECT [u(cobj,csys)]=@check strlen(%0)=@attach %!/INC`MSG=ERROR: No mecha name entered to select.;@check cor(u(setr`%va,mech_id,u(mysql,FIND`MECHA,%q<pid1>,%0,%0)),u(setr`%va,mech_id,u(mysql,FIND`MECHA`PARTIAL,%q<pid1>,sqlescape(%0),%0)))=@attach %!/INC`MSG=ERROR: Mecha '%0' not found.;@check cor(u(mysql,MECHA`APPROVED,%q<pid1>,%q<mech_id>),elock(#997/Basic,%#),u(isadmin`%va,%#))=@attach %!/INC`MSG=ERROR: Permission denied. Mecha is not approved for play.;&D`CSYS`MECHA %#=%q<mech_id>;@attach %!/INC`MSG=Mecha selected.
+
+&Q`FIND`MECHA`PARTIAL [u(cobj,csys)]=SELECT mech.id from csys_mechas as mech LEFT JOIN csys_player_mechas as link on link.mech_id=mech.id WHERE link.player_id=? AND (mech.name like '!%%' OR mech.id=?) LIMIT 1
+
+&Q`FIND`MECHA`PARTIAL [u(cobj,csys)]=SELECT mech.id FROM csys_mechas as mech LEFT JOIN csys_player_mechas as link ON link.mech_id=mech.id WHERE link.player_id=? AND (mech.name=? OR mech.id=?) LIMIT 1
+&Q`MECHA`APPROVED [u(cobj,csys)]=SELECT approved from csys_player_mechas where player_id=? and mech_id=? LIMIT 1
+
+@@ FREE ATTACKS
+&INC`STARTFREE [u(cobj,csys)]=@check isint(u(setr`%va,pilot_id,get(%#/D`CSYS`PILOT)))=@attach %!/INC`MSG=ERROR: Your Pilot is not set.;@check isint(u(setr`%va,mech_id,get(%#/D`CSYS`MECHA)))=@attach %!/INC`MSG=ERROR: Your Mecha is not set.;@check isint(u(setr`%va,link_id,u(mysql,GET`LINK_ID,%q<pid1>,%q<mech_id>)))=@attach %!/INC`MSG=ERROR: Could not link mecha with player. Contact coder.;@check strlen(%0)=@attach %!/INC`MSG=ERROR: No free attack name entered.;th u(setq`%va,hash,D`COMBAT`ATTACKS`[digest(md5,ucstr(u(setr`%va,name,trim(stripansi(%0)))))]);@stop u(charsearch,%q<name>,%R %T)=@attach %!/INC`MSG=ERROR: No newlines or tabs in freeattack names.
+
+&INC`COMBAT`FREE`MAIN [u(cobj,csys)]=@attach %!/INC`STARTFREE;@check gte(words(%2),3)=@attach %!/INC`MSG=ERROR: Must include 3 words for attack: LEVEL\, TYPE\, MECHANISM. A fourth for EFFECT is optional.;@stop u(mysql,EXIST`ATTACK,%q<mech_id>,%q<name>)=@attach %!/INC`MSG=ERROR: Mecha already has an attack called that.;@check cand(u(valnum,u(setr`%va,level,elements(%2,1))),lte(%q<level>,10))=@attach %!/INC`MSG=ERROR: Level must be a number 1-10.;@check cor(strlen(u(setr`%va,find,u(filter,EXACT_TRAIT,u(setr`%va,types,reglattr(u(cobj,csys)/^TYPE`\\d+$)),%b,%b,elements(%2,2)))),strlen(u(setr`%va,find,u(filter,WILD_TRAIT,%q<types>,%b,%b,elements(%2,2)))))=@attach %!/INC`MSG=ERROR: Could not find Type named '[elements(%2,2)]'.;th u(setq`%va,type,last(%q<find>,`));@check cor(strlen(u(setr`%va,find,u(filter,EXACT_TRAIT,u(setr`%va,types,reglattr(u(cobj,csys)/^MECHANISM`\\d+$)),%b,%b,elements(%2,3)))),strlen(u(setr`%va,find,u(filter,WILD_TRAIT,%q<types>,%b,%b,elements(%2,3)))))=@attach %!/INC`MSG=ERROR: Could not find Mechanism named '[elements(%2,3)]'.;th u(setq`%va,mechanism,last(%q<find>,`));@select/inline strlen(elements(%2,4))=>0,{@check cor(strlen(u(setr`%va,find,u(filter,EXACT_TRAIT,u(setr`%va,effects,iter(u(%!/EFFECTS`FREE),EFFECT`%i0)),%b,%b,elements(%2,4)))),strlen(u(setr`%va,find,u(filter,WILD_TRAIT,%q<effects>,%b,%b,elements(%2,2)))))=@attach %!/INC`MSG=ERROR: Could not find Effect named '[elements(%2,4)]'.;th u(setq`%va,effect,last(%q<find>,`))};@select/inline u(setr`%va,free_id,u(mysql,GET`FREEATTACK,%q<link_id>,%q<name>))=>0,{@attach %!/INC`DOSQL=UPDATE`FREEATTACK,%q<name>,%q<level>,%q<type>,%q<mechanism>,%q<free_id>},{@attach %!/INC`DOSQL=NEW`FREEATTACK,%q<link_id>,%q<name>,%q<level>,%q<type>,%q<mechanism>;th u(setq`%va,free_id,u(mysql,GET`FREEATTACK,%q<link_id>,%q<name>))};@attach %!/INC`DOSQL=DELETE`FREE_EFFECTS,%q<free_id>;@select/inline %q<effect>=>0,{@attach %!/INC`DOSQL=NEW`FREE_EFFECT,%q<free_id>,%q<effect>};@attach %!/INC`COMBAT`READYCHARACTER`ATTACKS`PREPATTACK=%#,%q<hash>,u(mysql3,READY`FREEATTACK2,%q<link_id>,%q<free_id>),1;&%q<hash>`FREE %0=1;&%q<hash>`SPECIAL %0=0;@attach %!/INC`MSG=Freeattack '%q<name>' Set!
+
+&Q`GET`LINK_ID [u(cobj,csys)]=SELECT id FROM csys_player_mechas WHERE player_id=? AND mech_id=? LIMIT 1
+&Q`GET`FREEATTACK [u(cobj,csys)]=SELECT id FROM csys_free_attacks WHERE link_id=? AND name=? LIMIT 1
+&Q`UPDATE`FREEATTACK [u(cobj,csys)]=UPDATE csys_free_attacks SET name=?,level=?,type_id=?,mechanism_id=? WHERE id=?
+&Q`NEW`FREEATTACK [u(cobj,csys)]=INSERT INTO csys_free_attacks (link_id,name,level,type_id,mechanism_id) VALUES (?,?,?,?,?)
+&Q`DELETE`FREE_EFFECTS [u(cobj,csys)]=DELETE FROM csys_free_effects where attack_id=?
+&Q`NEW`FREE_EFFECT [u(cobj,csys)]=INSERT INTO csys_free_effects (attack_id,effect_id) VALUES (?,?)
+&Q`READY`FREEATTACK2 [u(cobj,csys)]=SELECT attacks.name,attacks.level,attacks.signature,attacks.type_id,attacks.mechanism_id,attacks.id,effects.effect_id FROM csys_free_attacks as attacks LEFT JOIN csys_free_effects as effects ON attacks.id=effects.attack_id where attacks.link_id=? and attacks.id=?
+
+
+&INC`COMBAT`FREE`REM [u(cobj,csys)]=@attach %!/INC`COMBAT`FREE`DEL
+&INC`COMBAT`FREE`DEL [u(cobj,csys)]=@attach %!/INC`STARTFREE;@check hasattr(%#/%q<hash>)=@attach %!/INC`MSG=ERROR: You do not have a free attack named that.;@attach %!/WIPE=%#,%q<hash>;@attach %!/INC`DOSQL=DELETE`FREEATTACK,%q<link_id>,%q<name>;@attach %!/INC`MSG=Deleted Freeattack '%q<name>'!
+
+&Q`DELETE`FREEATTACK [u(cobj,csys)]=DELETE FROM csys_free_attacks WHERE link_id=? AND name=? LIMIT 1
+
+&INC`COMBAT`FREE`CLEAR [u(cobj,csys)]=@check isint(u(setr`%va,pilot_id,get(%#/D`CSYS`PILOT)))=@attach %!/INC`MSG=ERROR: Your Pilot is not set.;@check isint(u(setr`%va,mech_id,get(%#/D`CSYS`MECHA)))=@attach %!/INC`MSG=ERROR: Your Mecha is not set.;@check isint(u(setr`%va,link_id,u(mysql,GET`LINK_ID,%q<pid1>,%q<mech_id>)))=@attach %!/INC`MSG=ERROR: Could not link mecha with player. Contact coder.;@attach %!/INC`VERIFY=[ansi(hr,WARNING:)] This will delete ALL of your Free attacks for the currently selected Mecha. Are you sure? Enter the command again within ten seconds to verify.,CLEAR FREEATTACKS %q<mech_id>;th u(setq`%va,freeattacks,setdiff(lattr(%#/D`COMBAT`ATTACKS`*),reglattr(%#/^D`COMBAT`ATTACKS`\\d+$)));@dolist/inline %q<freeattacks>=@attach %!/WIPE=%#,%i0;@attach %!/INC`DOSQL=DELETE`FREEATTACKS,%q<link_id>;@attach %!/INC`MSG=Free Attacks cleared!
+
+&Q`DELETE`FREEATTACKS [u(cobj,csys)]=DELETE FROM csys_free_attacks WHERE link_id=?
+
+@@ BOSS
+&INC`COMBAT`BOSS`MAIN [u(cobj,csys)]=@attach %!/INC`VALID`POSINT=%0;@select/inline %q<value>=>1,{@remit %l=[ansi(g,COMBAT:)] %n prepares to tussle with %0 people! Cue the Boss music!},1,{@remit %l=[ansi(g,COMBAT:)] %n disables %p Boss mode.};&D`BOSS %#=%q<value>
+
+
+@@ RADAR
+&INC`COMBAT`RADAR`MAIN [u(cobj,csys)]=@select/inline strlen(%0)=>0,{@attach %!/INC`CHECKPC=%0,1;th u(setq`%va,radar,%q<t1>)},{th u(setq`%va,radar,u(filter,RADAR,u(lvplayers`%va,%l)))};@check words(%q<radar>)=@attach %!/INC`MSG=Nobody to show up on your radar. Bummer!;@pemit %#=u(header,Radar Display);@pemit %#=ansi(u(color`%va,%#,COMBAT,COLUMN_NAMES),align(20 25 12 8 10,Pilot,Mecha,Size,Health,Heat));@pemit %#=u(separator);@dolist/inline %q<radar>={@pemit %#=align(20 25 12 8 10,u(getproperty,%i0,BANNER)[if(strmatch(u(setr`%va,pilname,get(%i0/D`COMBAT`STATS`PILOT)),name(%i0)),,%b\(as %q<pilname>\))],get(%i0/D`COMBAT`STATS`MECHA),u(mechsize,%i0),u(RADARHP,%i0),u(heatstatus,%i0))};@pemit %#=u(footer)
+
+&FIL`RADAR [u(cobj,csys)]=t(cand(nattr(%0/D`COMBAT`**),not(get(%0/D`OBSERVER))))
+
+&RADARHP [u(cobj,csys)]=switch(before(mul(u(percent,%0),100),.),100,Perfect,>79,Excellent,>59,Good,>39,Fine,>19,Damaged,>0,Critical,Scrap)
+
+@@ READY CHARACTER
+
+&INC`COMBAT`READYCHARACTER [u(cobj,csys)]=@wipe %0/D`COMBAT;@attach %!/INC`COMBAT`READYCHARACTER`PILOT;@attach %!/INC`COMBAT`READYCHARACTER`MECHA;@attach %!/INC`COMBAT`READYCHARACTER`FINISH;@attach %!/INC`COMBAT`READYCHARACTER`ATTACKS;@attach %!/INC`COMBAT`READYCHARACTER`FREEATTACKS
+
+&INC`COMBAT`READYCHARACTER`PILOT [u(cobj,csys)]=th u(setq`%va,pildata,u(mysql3,READY`PILOT,%2));th u(setq`%va,pilabil,u(mysql,READY`PILOT`ABILITIES,%2));th u(setq`%va,pilboost,u(mysql,READY`PILOT`BOOSTS,%2));&D`COMBAT`STATS`PILOT %0=elements(%q<pildata>,1,chr(177));@dolist/inline MEL RNG SKL AIM AGI MOB DEF ARM={&D`COMBAT`STATS`PILOT`%i0 %0=elements(%q<pildata>,add(inum(0),1),chr(177))};&D`COMBAT`STATS`PILOT`ABILITIES %0=%q<pilabil>;&D`COMBAT`STATS`PILOT`BOOSTS %0=%q<pilboost>
+
+&Q`READY`PILOT [u(cobj,csys)]=SELECT name,mel,rng,skl,aim,agi,mob,def,arm FROM csys_pilots where id=? LIMIT 1
+&Q`READY`PILOT`ABILITIES [u(cobj,csys)]=SELECT trait_id from csys_pilot_traits where pilot_id=? and mode_id=0 order by trait_id
+&Q`READY`PILOT`BOOSTS [u(cobj,csys)]=SELECT trait_id from csys_pilot_traits where pilot_id=? and mode_id=1 order by trait_id
+
+&INC`COMBAT`READYCHARACTER`MECHA [u(cobj,csys)]=th u(setq`%va,mechdata,u(mysql3,READY`MECHA,%3));th u(setq`%va,mechabil,u(mysql,READY`MECHA`ABILITIES,%3));th u(setq`%va,mechboost,u(mysql,READY`MECHA`BOOSTS,%3));&D`COMBAT`STATS`MECHA %0=elements(%q<mechdata>,1,chr(177));@dolist/inline MEL RNG SKL AIM AGI MOB DEF ARM={&D`COMBAT`STATS`MECHA`%i0 %0=elements(%q<mechdata>,add(inum(0),1),chr(177))};&D`COMBAT`STATS`MECHA`ABILITIES %0=%q<mechabil>;&D`COMBAT`STATS`MECHA`BOOSTS %0=%q<mechboost>;@select/inline t(elements(%q<mechdata>,11,chr(177)))=1,{&D`COMBAT`STATS`MECHA`TECH %0=X},0,{&D`COMBAT`STATS`MECHA`TECH %0=elements(%q<mechdata>,10,chr(177))};&D`COMBAT`STATS`MECHA`SIZE %0=elements(%q<mechdata>,12,chr(177))
+
+&Q`READY`MECHA [u(cobj,csys)]=SELECT name,mel,rng,skl,aim,agi,mob,def,arm,tech,tech_x,size FROM csys_mechas where id=? LIMIT 1
+&Q`READY`MECHA`ABILITIES [u(cobj,csys)]=SELECT trait_id from csys_mech_traits where mech_id=? and mode_id=0 order by trait_id
+&Q`READY`MECHA`BOOSTS [u(cobj,csys)]=SELECT trait_id from csys_mech_traits where mech_id=? and mode_id=1 order by trait_id
+
+&INC`COMBAT`READYCHARACTER`ATTACKS [u(cobj,csys)]=th u(setq`%va,atkdata,u(mysql3,READY`ATTACKS,%3));@dolist/inline/delimit [chr(176)] %q<atkdata>={th u(setq`%va,slot,D`COMBAT`ATTACKS`[inum(0)]);@attach/localize %!/INC`COMBAT`READYCHARACTER`ATTACKS`PREPATTACK=%0,%q<slot>,%i0,0;&%q<slot>`FREE %0=0;&%q<slot>`SPECIAL %0=1};
+
+&INC`COMBAT`READYCHARACTER`ATTACKS`PREPATTACK [u(cobj,csys)]=&%1 %0=elements(%2,1,chr(177));&%1`LEVEL %0=elements(%2,2,chr(177));&%1`SIGNATURE %0=u(setr`%va,sig,elements(%2,3,chr(177)));&%1`SPECIAL %0=not(%q<sig>);&%1`FREE %0=0;&%1`TYPE %0=u(setr`%va,typeid,elements(%2,4,chr(177)));&%1`MECHANISM %0=u(setr`%va,mechanid,elements(%2,5,chr(177)));&%1`EFFECTS %0=if(%3,elements(%2,7,chr(177)),u(mysql,READY`ATTACKS`EFFECTS,elements(%2,6,chr(177))));th u(setq`%va,mode,default(%!/MECHANISM`%q<mechanid>`MODE,MELEE));&%1`EFFECTS`TARGET %0=u(setr`%va,tareffs,u(filter,TAGFILTER,get(%0/%1`EFFECTS),%b,%b,EFFECT,CATEGORIES,target));&%1`EFFECTS`TARGET`INSTANT %0=u(filter,TAGFILTER,%q<tareffs>,%b,%b,EFFECT,CATEGORIES,instant);&%1`EFFECTS`TARGET`LINGER %0=u(filter,TAGFILTER,%q<tareffs>,%b,%b,EFFECT,CATEGORIES,linger);&%1`EFFECTS`SELF %0=u(setr`%va,selfeff,u(filter,TAGFILTER,get(%0/%1`EFFECTS),%b,%b,EFFECT,CATEGORIES,self));&%1`EFFECTS`SELF`LINGER %0=u(filter,TAGFILTER,%q<selfeff>,%b,%b,EFFECT,CATEGORIES,linger);&%1`EFFECTS`SELF`INSTANT %0=u(setr`%va,selfinst,u(filter,TAGFILTER,%q<selfeff>,%b,%b,EFFECT,CATEGORIES,instant));&%1`EFFECTS`SELF`RUNTIME %0=u(setr`%va,selfrun,u(filter,TAGFILTER,%q<selfeff>,%b,%b,EFFECT,CATEGORIES,runtime));&%1`EFFECTS`PRIORITY %0=u(filter,TAGFILTER,%q<selfeff>,%b,%b,EFFECT,CATEGORIES,priority);@select/inline %3=0,{&%1`AMMO %0=add(1,u(ladd,iter(%q<selfeff>,u(%!/EFFECT`%i0`AMMO,%0,%1))))};&%1`PRECALC`ATTACK %0=add(get(%0/D`COMBAT`BONUSES`ALL_ATTACK),get(%0/D`COMBAT`BONUSES`%q<mode>_ATTACK),get(%0/D`COMBAT`BONUSES`%q<typeid>_ATTACK),default(%!/MECHANISM`%q<mechanid>`ATTACK,0),u(ladd,iter(%q<selfinst>,udefault(%!/EFFECT`%i0`ATTACK,0,%0))),if(%3,get(%0/D`COMBAT`BONUSES`FREE_ATTACK)));&%1`PRECALC`ATTACK`MULTIPLIER %0=add(get(%0/D`COMBAT`BONUSES`ALL_ATTACK`MULTIPLIER),get(%0/D`COMBAT`BONUSES`%q<mode>_ATTACK`MULTIPLIER),get(%0/D`COMBAT`BONUSES`%q<typeid>_ATTACK`MULTIPLIER),default(%!/MECHANISM`%q<mechanid>`ATTACK`MULTIPLIER,0),u(ladd,iter(%q<selfinst>,udefault(%!/EFFECT`%i0`ATTACK`MULTIPLIER,0,%0))),if(%3,get(%0/D`COMBAT`BONUSES`FREE_ATTACK`MULTIPLIER)));&%1`HEAT %0=u(calcheat,%0,%1)
+
+&CALCHEAT [u(cobj,csys)]=add(if(words(get(%0/%1`EFFECTS)),switch(get(%0/%1`LEVEL),1,-9,2,-3,3,7,4,14,5,21,6,28,7,35,8,42,9,56,10,70),switch(get(%0/%1`LEVEL),1,-15,2,-5,3,5,4,10,5,15,6,20,7,25,8,30,9,40,10,50)),get(%0/D`COMBAT`HEAT`COST))
+
+&Q`READY`ATTACKS [u(cobj,csys)]=SELECT name,level,signature,type_id,mechanism_id,id FROM csys_attacks where mech_id=? ORDER BY level,signature
+&Q`READY`ATTACKS`EFFECTS [u(cobj,csys)]=SELECT effect_id from csys_attack_effects where attack_id=? ORDER BY effect_id
+
+&INC`COMBAT`READYCHARACTER`FREEATTACKS [u(cobj,csys)]=th u(setq`%va,freedata,u(mysql3,READY`FREEATTACKS,u(mysql,GET`LINK_ID,%1,%3)));@dolist/inline/delimit [chr(176)] %q<freedata>={th u(setq`%va,slot,D`COMBAT`ATTACKS`[digest(md5,ucstr(elements(%i0,1,chr(177))))]);@attach/localize %!/INC`COMBAT`READYCHARACTER`ATTACKS`PREPATTACK=%0,%q<slot>,%i0,1;&%q<slot>`FREE %0=1;&%q<slot>`SPECIAL %0=0}
+
+&Q`READY`FREEATTACKS [u(cobj,csys)]=SELECT attacks.name,attacks.level,attacks.signature,attacks.type_id,attacks.mechanism_id,attacks.id,effects.effect_id FROM csys_free_attacks as attacks LEFT JOIN csys_free_effects as effects ON attacks.id=effects.attack_id where attacks.link_id=?
+
+&INC`COMBAT`READYCHARACTER`FINISH [u(cobj,csys)]=@attach %!/INC`COMBAT`READYCHARACTER`FINISH`STARTING;@attach %!/INC`COMBAT`READYCHARACTER`FINISH`TECH;@attach/localize %!/INC`COMBAT`READYCHARACTER`FINISH`ABILITIES;@attach/localize %!/INC`COMBAT`READYCHARACTER`FINISH`BOOSTS;@attach %!/INC`COMBAT`READYCHARACTER`FINISH`CALC;@attach %!/INC`COMBAT`READYCHARACTER`FINISH`STATS;
+
+&INC`COMBAT`READYCHARACTER`FINISH`ABILITIES [u(cobj,csys)]=@dolist/inline [get(%0/D`COMBAT`STATS`PILOT`ABILITIES)]%b[get(%0/D`COMBAT`STATS`MECHA`ABILITIES)]={th u(setq`%va,count-%i0,add(1,r(count-%i0)));th u(setstat,%0,D`COMBAT`ABILITIES,%i0,r(count-%i0))};th u(setq`%va,clnabil,get(%0/D`COMBAT`ABILITIES));&D`COMBAT`ABILITIES`ATTACK %0=u(filter,TAGFILTER,%q<clnabil>,|,|,ABIL,CATEGORIES,attack);&D`COMBAT`ABILITIES`DEFENSE %0=u(filter,TAGFILTER,%q<clnabil>,|,|,ABIL,CATEGORIES,defense);&D`COMBAT`ABILITIES`PRECALC %0=u(filter,TAGFILTER,%q<clnabil>,|,|,ABIL,CATEGORIES,precalc);&D`COMBAT`ABILITIES`HEALTH_25 %0=u(filter,TAGFILTER,%q<clnabil>,|,|,ABIL,CATEGORIES,health_25);&D`COMBAT`ABILITIES`HEALTH_50 %0=u(filter,TAGFILTER,%q<clnabil>,|,|,ABIL,CATEGORIES,health_50);&D`COMBAT`ABILITIES`HEALTH_75 %0=u(filter,TAGFILTER,%q<clnabil>,|,|,ABIL,CATEGORIES,health_75)
+
+&INC`COMBAT`READYCHARACTER`FINISH`BOOSTS [u(cobj,csys)]=@dolist/inline [get(%0/D`COMBAT`STATS`PILOT`BOOSTS)]%b[get(%0/D`COMBAT`STATS`MECHA`BOOSTS)]={th u(setq`%va,count2-%i0,add(1,r(count2-%i0)));th u(setstat,%0,D`COMBAT`BOOSTS,%i0,r(count2-%i0))}
+
+&INC`COMBAT`READYCHARACTER`FINISH`TECH [u(cobj,csys)]=&D`COMBAT`TECHLETTER %0=u(setr`%va,techletter,if(strmatch(get(%0/D`COMBAT`STATS`MECHA`TECH),X),EX,switch(sub(get(%0/D`COMBAT`STATS`MECHA`TECH),u(game_config,COMBAT,TECH_LEVEL)),>=300,S,>=200,A,>=100,B,<=-300,F,<=-200,E,<=-100,D,C)));&D`COMBAT`TECHBONUS %0=switch(get(%0/D`COMBAT`TECHLETTER),EX,1.15,S,1.2,A,1.1,B,1.05,C,1,D,0.95,E,0.9,F,0.85)
+
+&INC`COMBAT`READYCHARACTER`FINISH`STATS [u(cobj,csys)]=th u(setq`%va,direct,u(abil,%0,17));th u(setq`%va,versatile,u(abil,%0,18));@dolist/inline MEL RNG SKL AIM AGI MOB DEF ARM={&D`COMBAT`STATS`FINAL`%i0 %0=floor(add(mul(get(%0/D`COMBAT`STATS`PILOT`%i0),if(%q<direct>,0.8,0.4)),mul(if(cand(%q<versatile>,match(MEL RNG SKL AIM,%i0)),null(u(setq`%va,mel,get(%0/D`COMBAT`STATS`MECHA`MEL))[u(setq`%va,rng,get(%0/D`COMBAT`STATS`MECHA`RNG))][u(setq`%va,skl,get(%0/D`COMBAT`STATS`MECHA`SKL))][u(setq`%va,aim,get(%0/D`COMBAT`STATS`MECHA`AIM))])[switch(%i0,MEL,add(mul(%q<mel>,0.8),mul(%q<rng>,0.4)),RNG,add(mul(%q<rng>,0.8),mul(%q<mel>,0.4)),SKL,add(mul(%q<skl>,0.8),mul(%q<aim>,0.4)),AIM,add(mul(%q<aim>,0.8),mul(%q<skl>,0.4)))],get(%0/D`COMBAT`STATS`MECHA`%i0)),u(setr`%va,tech,default(%0/D`COMBAT`TECHBONUS,1)),if(%q<direct>,0.4,0.8))))}
+
+&INC`COMBAT`READYCHARACTER`FINISH`STARTING [u(cobj,csys)]=&D`COMBAT`HEALTH %0=10000;&D`COMBAT`HEAT %0=10;&D`COMBAT`HEAT`DISSIPATE %0=10;&D`COMBAT`HEAT`COST %0=0;&D`COMBAT`HEAT`PENALTY_MULTIPLIER %0=1;&D`COMBAT`DAMAGE %0=0;&D`COMBAT`DEFENSE`COOL %0=15;&D`COMBAT`DEFENSE`AVOID %0=3;&D`COMBAT`DEFENSE`BLOCK %0=0.1;&D`COMBAT`DEFENSE`STEADY %0=5
+
+&INC`COMBAT`READYCHARACTER`FINISH`CALC [u(cobj,csys)]=@dolist/inline/nobreak/delimit | [get(%0/D`COMBAT`ABILITIES`PRECALC)]={@attach %!/[u(setr`%va,abattr,ABIL`[before(%i0,~)])]`PRECALC=%0,after(%i0,~);@dolist/inline edit(setunion(lattr(%!/%q<abattr>`*_ATTACK**),lattr(%!/%q<abattr>`*_DEFENSE**)),%q<abattr>`,)={th u(addto,%0,D`COMBAT`BONUSES`%i0,u(%!/%q<abattr>`%i0,%0,after(%i1,~)))};@dolist/inline HEALTH={th u(addto,%0,D`COMBAT`%i0,u(%!/%q<abattr>`%i0,%0,after(%i1,~)))};@dolist/inline HEAT_DISSIPATE HEAT_COST HEAT_PENALTY_MULTIPLIER={th u(addto,%0,D`COMBAT`HEAT`[after(%i0,HEAT_)],u(%!/%q<abattr>`%i0,%0,after(%i1,~)))};@dolist/inline STEADY AVOID BLOCK COOL={th u(addto,%0,D`COMBAT`DEFENSE`%i0,u(%!/%q<abattr>`%i0,%0,after(%i1,~)))};&D`COMBAT`TYPEGUARD %0=setunion(get(%0/D`COMBAT`TYPEGUARD),u(%!/%q<abattr>`TYPEGUARD,%0,after(%i1,~)))};&D`COMBAT`BOSS %0=default(%0/D`BOSS,1);&D`COMBAT`HEALTH %0=mul(get(%0/D`COMBAT`HEALTH),default(%0/D`BOSS,1));@attach %!/WIPE=%0,D`BOSS
+
+&ABIL [u(cobj,csys)]=u(getstat,%0,D`COMBAT`ABILITIES,%1)
+
+&ADDTO [u(cobj,csys)]=u(attrib_set,%0,%1,add(%2,default(%0/%1,0)))
+
+@@ %0 - Character objid to ready. %1 - Character ID to use. %2 - Pilot ID to use. %3 - Mecha ID to use.
+
+th u(NEWCONF,config,COMBAT,TECH_LEVEL,100,Current Tech level?,POSINT)
+th u(NEWCONF,config,COMBAT,JOB_CAT,CSYS,Job category for +submit?,WORD)
+
+@@ - RESET
+&INC`COMBAT`RESET`MAIN [u(cobj,csys)]=@check isint(u(setr`%va,pilot_id,get(%#/D`CSYS`PILOT)))=@attach %!/INC`MSG=ERROR: Your Pilot is not set.;@check cor(elock(#997/Basic,%#),eq(2,u(mysql,GET`PILOT`APPROVED,%q<pid1>,%q<pilot_id>)))=@attach %!/INC`MSG=ERROR: Pilot is not approved for play.;@check isint(u(setr`%va,mech_id,get(%#/D`CSYS`MECHA)))=@attach %!/INC`MSG=ERROR: Your Mecha is not set.;@check cor(elock(#997/Basic,%#),eq(2,u(mysql,GET`MECHA`APPROVED,%q<pid1>,%q<mech_id>)))=@attach %!/INC`MSG=ERROR: Mecha is not approved for play.;@attach %!/INC`COMBAT`READYCHARACTER=%:,%q<pid1>,%q<pilot_id>,%q<mech_id>;@remit %l=[ansi(g,COMBAT:)] %n has reset!
+
+@@ - STATS
+&INC`COMBAT`SHEET`MAIN [u(cobj,csys)]=@attach %!/INC`COMBAT`STATS`MAIN
+&INC`COMBAT`STATS`MAIN [u(cobj,csys)]=@attach %!/INC`CHECKPC=u(strfirstof`%va,if(elock(#997/Basic,%#),%0),%#),1;@check nattr(%q<t1>/D`COMBAT`**)=@attach %!/INC`MSG=ERROR: %q<t1name> is not readied for battle.;@pemit %#=u(header,%q<t1name> - Stats);@pemit %#=ansi(u(color`%va,%#,COMBAT,COLUMN_NAMES),align(1. 3 1. 3 1. 3 1. 3 1. -24 1. -23 1.,u(setr`%va,sep,ansi(u(color`%va,%#,COMBAT,BORDER),|)),PIL,%q<sep>,MEC,%q<sep>,STA,%q<sep>,TOT,%q<sep>,Abilities,%q<sep>,Boosts,%q<sep>));@pemit %#=u(separator);@pemit %#=align(1. 3 1. 3 1. 3 1. 3 1. 24 1. 23 1.,%q<sep>,iter(v(STATLIST),get(%q<t1>/D`COMBAT`STATS`PILOT`%i0),%b,%r),%q<sep>,iter(v(STATLIST),get(%q<t1>/D`COMBAT`STATS`MECHA`%i0),%b,%r),%q<sep>,iter(v(STATLIST),%i0,%b,%r),%q<sep>,iter(v(STATLIST),get(%q<t1>/D`COMBAT`STATS`FINAL`%i0),%b,%r),%q<sep>,iter(Pilot Mecha,center(center(%i0,20,-),24)%R[iter(get(%q<t1>/D`COMBAT`STATS`%i0`ABILITIES),get(u(cobj,csys)/ABIL`%i0),%b,%r)],%b,%r),%q<sep>,iter(Pilot Mecha[if(words(get(%q<t1>/D`COMBAT`BOOSTS`EXTRA)),%bExtra)],center(center(%i0,20,-),23)%R[iter(switch(%i0,Extra,get(%q<t1>/D`COMBAT`BOOSTS`EXTRA),get(%q<t1>/D`COMBAT`STATS`%i0`BOOSTS)),switch(u(setr`%va,uses,u(getstat,%q<t1>,D`COMBAT`BOOSTS,%i0)),0,ansi(hr[if(u(boost,%q<t1>,%i0),u)],get(u(cobj,csys)/BOOST`%i0)),1,ansi(hg[if(u(boost,%q<t1>,%i0),u)],get(u(cobj,csys)/BOOST`%i0)),>1,ansi(hg[if(u(boost,%q<t1>,%i0),u)],get(u(cobj,csys)/BOOST`%i0))%B\(%q<uses>\)),%b,%r)],%b,%R),%q<sep>);@pemit %#=u(separator,PILOT: [get(%q<t1>/D`COMBAT`STATS`PILOT)] - MECHA: [get(%q<t1>/D`COMBAT`STATS`MECHA)] - TECH LEVEL: [get(%q<t1>/D`COMBAT`TECHLETTER)]);@pemit %#=u(subheader,Special Attacks);@pemit %#=ansi(u(color`%va,%#,COMBAT,COLUMN_NAMES),align(19 5 15 15 15 4,Name,Lvl,Type,Mechanism,Effect,Heat));@dolist/inline sortkey(#lambda/get(%q<t1>/\%0`LEVEL),u(setr`%va,atklist,reglattr(%q<t1>/^D`COMBAT`ATTACKS`\\d+$)))=@pemit %#=u(attackline,%q<t1>,%i0);@pemit %#=u(separator,Free Attacks);@dolist/inline sortkey(#lambda/get(%q<t1>/\%0`LEVEL),setdiff(lattr(%q<t1>/D`COMBAT`ATTACKS`*),%q<atklist>))=@pemit %#=u(attackline,%q<t1>,%i0);@pemit %#=u(footer,HP: [bound(sub(get(%q<t1>/D`COMBAT`HEALTH),get(%q<t1>/D`COMBAT`DAMAGE)),0)]/[get(%q<t1>/D`COMBAT`HEALTH)] - HEAT: [get(%q<t1>/D`COMBAT`HEAT)])
+
+&ATTACKLINE [u(cobj,csys)]=align(19 5 15 15 15 4,ansi(if(u(setr`%va,sig,get(%0/%1`SIGNATURE)),u)[if(cand(isint(last(%1,`)),gte(get(%0/%1`USES),add(1,if(cand(%q<sig>,match(get(%0/%1`EFFECTS),9)),2,0)))),hr)],get(%0/%1)),get(%0/%1`LEVEL),default(%!/TYPE`[get(%0/%1`TYPE)],<unknown>),default(%!/MECHANISM`[get(%0/%1`MECHANISM)],<unknown>),iter(get(%0/%1`EFFECTS),default(%!/EFFECT`%i0,<unknown>),%b,\,%b),switch(u(setr`%va,heatcalc,get(%0/%1`HEAT)),0,0,>0,ansi(hr,%q<heatcalc>),<0,ansi(hg,%q<heatcalc>)))
+
+
+&STATLIST [u(cobj,csys)]=MEL RNG SKL AIM AGI MOB DEF ARM
+
+@@ - ATTACK
+&INC`COMBAT`ATTACK`MAIN [u(cobj,csys)]=@attach %!/INC`COMBAT`ATTACK`MAIN`TARGET;@attach %!/INC`COMBAT`ATTACK`MAIN`ATTACK;@attach %!/INC`COMBAT`ATTACK`MAIN`SELF_EFFECTS;@attach %!/INC`COMBAT`ATTACK`MAIN`BONUSES;@attach %!/INC`COMBAT`ATTACK`MAIN`LAUNCH;@attach %!/INC`COMBAT`ATTACK`MAIN`ENDTURN
+
+&INC`COMBAT`ATTACK`MAIN`TARGET [u(cobj,csys)]=@check nattr(%#/D`COMBAT`**)=@attach %!/INC`MSG=ERROR: You are not combat ready. Make sure your Pilot/Mecha are set and use +reset.;@stop gte(get(%#/D`COMBAT`DAMAGE),get(%#/D`COMBAT`HEALTH))=@attach %!/INC`MSG=ERROR: The defeated can do no such thing!;@check strlen(%0)=@attach %!/INC`MSG=ERROR: Nobody entered to attack.;@check strlen(%2)=@attach %!/INC`MSG=ERROR: No attack name entered.;th u(setq`%va,allplayers,u(setr`%va,players,lvplayers(%l)));@dolist/inline/delimit \, %0={@check isdbref(u(setr`%va,ply,namegrab(%q<players>,%i0)))=@attach %!/INC`MSG=ERROR: '%i0' does not match a present player.;th u(setq`%va,players,setdiff(%q<players>,%q<ply>))};th u(setq`%va,targets,setdiff(%q<allplayers>,%q<players>));@dolist/inline %q<targets>={@check nattr(%i0/D`COMBAT`**)=@attach %!/INC`MSG=ERROR: [name(%i0)] is not ready for battle.;@stop hasattr(%i0/D`COMBAT`Q`%#)=@attach %!/INC`MSG=ERROR: You have already attacked [name(%i0)]!;@stop gte(get(%i0/D`COMBAT`DAMAGE),get(%i0/D`COMBAT`HEALTH))=@attach %!/INC`MSG=ERROR: [name(%i0)] is already wrecked!}
+
+&INC`COMBAT`ATTACK`MAIN`ATTACK [u(cobj,csys)]=@check cor(strlen(u(setr`%va,find,wildgrepi(%#,D`COMBAT`ATTACKS`*,%2))),strlen(u(setr`%va,find,first(filterbool(#lambda/strmatch(get(%#/\%0),%2*),sortkey(#lambda/strlen(get(%#/\%0)),lattr(%#/D`COMBAT`ATTACKS`*)))))))=@attach %!/INC`MSG=ERROR: Could not find an attack called '%2'.;th u(setq`%va,atk,%q<find>);@select/inline isint(last(%q<atk>,`))=1,{@stop gte(default(%#/%q<atk>`USES,0),default(%#/%q<atk>`AMMO,2))=@attach %!/INC`MSG=ERROR: '[get(%#/%q<atk>)]' is out of ammo...};th u(setq`%va,curheat,get(%#/D`COMBAT`HEAT));th u(setq`%va,addheat,get(%#/%q<atk>`HEAT));th u(setq`%va,mode,default(%!/MECHANISM`[get(%#/%q<atk>`MECHANISM)]`MODE,MELEE));th u(setq`%va,power,get(%#/D`COMBAT`STATS`FINAL`[switch(%q<mode>,MELEE,MEL,RANGED,RNG)]));th u(setq`%va,acc,get(%#/D`COMBAT`STATS`FINAL`[switch(%q<mode>,MELEE,SKL,RANGED,AIM)]))
+
+&INC`COMBAT`ATTACK`MAIN`SELF_EFFECTS [u(cobj,csys)]=@dolist/inline/nobreak [get(%#/%q<atk>`EFFECTS`PRIORITY)]={@attach %!/EFFECT`%i0`PRIORITY=%#};@dolist/inline/nobreak setunion(setunion(get(%#/%q<atk>`EFFECTS`SELF`LINGER),get(%#/%q<atk>`EFFECTS`SELF`INSTANT)),filterbool(#lambda/match(v(EFFECT`\%0`CATEGORIES),self),%q<extraeff>))={@attach %!/INC`SETEFFECT=%#,%i0};th u(setq`%va,extargeffs,filterbool(#lambda/match(v(EFFECT`\%0`CATEGORIES),target),%q<extraeff>));
+
+&INC`COMBAT`ATTACK`MAIN`BONUSES [u(cobj,csys)]=th u(setq`%va,bonuses,add(get(%#/%q<atk>`PRECALC`ATTACK),u(heatbonus,%#),u(dynamic,%#,ATTACK,ATTACK)));th u(setq`%va,multiplier,add(get(%#/%q<atk>`PRECALC`ATTACK`MULTIPLIER),u(dynamic,%#,ATTACK,ATTACK`MULTIPLIER)));
+
+&FIL`TAGFILTER [u(cobj,csys)]=t(match(v(%1`[before(%0,~)]`%2),%3))
+
+&INC`COMBAT`ATTACK`MAIN`LAUNCH [u(cobj,csys)]=th u(setq`%va,boss,default(%#/D`COMBAT`BOSS,1));@dolist/inline/nobreak %q<targets>={@attach/localize %!/INC`COMBAT`ATTACK`LAUNCH=%#,%i0,%q<extargeffs>};th u(addto,%#,D`COMBAT`HEAT,%q<addheat>);th u(addto,%#,%q<atk>`USES,1);@remit %l=[ansi(g,COMBAT:)] [if(gt(%q<boss>,1),ansi(hr,<BOSS-%q<boss>>)%B)][ansi(h,%n)] in the [get(%#/D`COMBAT`STATS`MECHA)] launched %p '[get(%#/%q<atk>)]' at [itemize(iter(u(sortname,%q<targets>),u(moniker,%i0),%b,|),|,and,\,)]!;@pemit/list %q<targets>=[ansi(g,COMBAT:)] [if(gt(%q<boss>,1),ansi(hr,<BOSS-%q<boss>>)%B)]%n attacked you! Respond with +defend %n=<choice>;@select/inline gt(u(setr`%va,overh,u(overheat,%#)),0)=1,{@attach %!/INC`DAMAGE=%#,floor(mul(get(%#/D`COMBAT`HEALTH),%q<overh>)),Overheating!}
+
+&INC`COMBAT`ATTACK`LAUNCH [u(cobj,csys)]=@attach %!/INC`CPTREE=%0,%q<atk>,%1,u(setr`%va,atkattr,D`COMBAT`Q`%0);&%q<atkattr>`BONUSES %1=add(%q<bonuses>,u(ladd,iter(get(%0/%q<atk>`EFFECTS`SELF`RUNTIME),udefault(%!/EFFECT`%i0`ATTACK,0,%1))));&%q<atkattr>`POWER %1=%q<power>;&%q<atkattr>`ACCURACY %1=%q<acc>;&%q<atkattr>`MODE %1=%q<mode>;&%q<atkattr>`MULTIPLIER %1=add(%q<multiplier>,u(ladd,iter(get(%0/%q<atk>`EFFECTS`SELF`RUNTIME),udefault(%!/EFFECT`%i0`ATTACK`MULTIPLIER,0,%1))),if(cand(match(get(%0/D`COMBAT`ACTIVE_BOOSTS),12),lte(u(percent,%1),0.5)),0.35,0));&%q<atkattr>`TIMESTAMP %1=secs();&%q<atkattr>`TARGETHEAT %1=get(%1/D`COMBAT`HEAT);&%q<atkattr>`EXTARGEFFS %1=%2;@select/inline t(%q<autores>)=1,{&%q<atkattr>`AUTORES %1=%q<autores>}
+
+&INC`COMBAT`ATTACK`MAIN`ENDTURN [u(cobj,csys)]=@attach/nobreak %!/INC`COMBAT`ATTACK`MAIN`ENDTURN`BOOSTS=%#;@attach/nobreak %!/INC`COMBAT`ATTACK`MAIN`ENDTURN`EFFECTS=%#
+
+&INC`COMBAT`ATTACK`MAIN`ENDTURN`BOOSTS [u(cobj,csys)]=@dolist/inline/nobreak/delimit | [get(%0/D`COMBAT`ACTIVE_BOOSTS`ATTACK)]={th u(setq`%va,eid,before(%i0,~));th u(setq`%va,rem,after(%i0,~));@select/inline %q<rem>=1,{th u(delstat,%0,D`COMBAT`ACTIVE_BOOSTS`ATTACK,%q<eid>);th u(setq`%va,endboostsatk,setunion(%q<endboostsatk>,%q<eid>));@select/inline t(u(getstat,%0,D`COMBAT`ACTIVE_BOOSTS`DEFENSE,%q<eid>))=0,{th u(setq`%va,endboosts,setunion(%q<endboosts>,%q<eid>));&D`COMBAT`ACTIVE_BOOSTS %0=setdiff(get(%0/D`COMBAT`ACTIVE_BOOSTS),%q<eid>)};@attach %!/BOOST`%q<eid>`DEACTIVATE=%0},{th u(setstat,%0,D`COMBAT`ACTIVE_BOOSTS`ATTACK,%q<eid>,sub(%q<rem>,1))}};@select/inline words(setinter(%q<endboosts>,%q<endboostsatk>))=>0,{@pemit %0=[ansi(g,COMBAT:)] Boosts wore off: [iter(setinter(%q<endboosts>,%q<endboostsatk>),default(%!/BOOST`%i0,<Unknown>),%b,\,%b)]};@select/inline words(setdiff(%q<endboostsatk>,%q<endboosts>))=>0,{@pemit %0=[ansi(g,COMBAT:)] Attack aspects of Boosts wore off: [iter(setdiff(%q<endboostsatk>,%q<endboosts>),default(%!/BOOST`%i0,<Unknown>),%b,\,%b)]. Defense aspects remain.}
+
+&INC`COMBAT`ATTACK`MAIN`ENDTURN`EFFECTS [u(cobj,csys)]=@dolist/inline/nobreak/delimit | [get(%0/D`COMBAT`ACTIVE_EFFECTS`ATTACK)]={th u(setq`%va,eid,before(%i0,~));th u(setq`%va,rem,after(%i0,~));@select/inline %q<rem>=1,{th u(delstat,%0,D`COMBAT`ACTIVE_EFFECTS`ATTACK,%q<eid>);th u(setq`%va,endEFFECTSatk,setunion(%q<endEFFECTSatk>,%q<eid>));@select/inline t(u(getstat,%0,D`COMBAT`ACTIVE_EFFECTS`DEFENSE,%q<eid>))=0,{th u(setq`%va,endEFFECTS,setunion(%q<endEFFECTS>,%q<eid>));@dolist/inline ACTIVE_EFFECTS ACTIVE_EFFECTS`BUFFS ACTIVE_EFFECTS`DEBUFFS={&D`COMBAT`%i0 %0=setdiff(get(%0/D`COMBAT`%i0),%q<eid>)}};@attach %!/EFFECT`%q<eid>`ON_REMOVE=%0},{th u(setstat,%0,D`COMBAT`ACTIVE_EFFECTS`ATTACK,%q<eid>,sub(%q<rem>,1))}};@select/inline words(setinter(%q<endEFFECTS>,%q<endEFFECTSatk>))=>0,{@pemit %0=[ansi(g,COMBAT:)] Effects wore off: [iter(setinter(%q<endEFFECTS>,%q<endEFFECTSatk>),default(%!/EFFECT`%i0,<Unknown>),%b,\,%b)]};@select/inline words(setdiff(%q<endEFFECTSatk>,%q<endEFFECTS>))=>0,{@pemit %0=[ansi(g,COMBAT:)] Attack aspects of Effects wore off: [iter(setdiff(%q<endEFFECTSatk>,%q<endEFFECTS>),default(%!/EFFECT`%i0,<Unknown>),%b,\,%b)]. Defense aspects remain.}
+
+&INC`DAMAGE [u(cobj,csys)]=@remit %l=[ansi(g,COMBAT:)] [if(%3,%3,[u(moniker,%0)] took [ansi(h,%1)] damage from %2!)];th u(setq`%va,predam,get(%0/D`COMBAT`DAMAGE));th u(setq`%va,prebon,u(healthbonus,%0));th u(addto,%0,D`COMBAT`DAMAGE,%1);th u(setq`%va,postbon,u(healthbonus,%0));th u(setq`%va,afterper,u(percent,%0));@select/inline lte(%q<afterper>,0)=1,{@remit %l=[ansi(g,COMBAT:)] [ansi(hr,name(%0) has been Defeated! *BOOM*)]},0,{@dolist/inline/nobreak 75 50 25={@attach %!/INC`DAMAGETIER`%i0}}
+
+&INC`DAMAGETIER`75 [u(cobj,csys)]=@select/inline cand(lte(%q<afterper>,0.75),not(hasattr(%0/D`COMBAT`PERCENT`75)))=1,{&D`COMBAT`PERCENT`75 %0=1;@dolist/inline/nobreak/delimit | [get(%0/D`COMBAT`ABILITIES`HEALTH_75)]={@attach %!/ABIL`[before(%i0,~)]`HEALTH_75=%0}};
+
+&INC`DAMAGETIER`50 [u(cobj,csys)]=@select/inline cand(lte(%q<afterper>,0.5),not(hasattr(%0/D`COMBAT`PERCENT`50)))=1,{&D`COMBAT`PERCENT`50 %0=1;@dolist/inline/nobreak/delimit | [get(%0/D`COMBAT`ABILITIES`HEALTH_50)]={@attach %!/ABIL`[before(%i0,~)]`HEALTH_50=%0}};
+
+&INC`DAMAGETIER`25 [u(cobj,csys)]=@select/inline cand(lte(%q<afterper>,0.25),not(hasattr(%0/D`COMBAT`PERCENT`25)))=1,{&D`COMBAT`PERCENT`25 %0=1;@dolist/inline/nobreak/delimit | [get(%0/D`COMBAT`ABILITIES`HEALTH_25)]={@attach %!/ABIL`[before(%i0,~)]`HEALTH_25=%0}};
+
+&INC`ADDBOOST [u(cobj,csys)]=th u(setq`%va,addboosts,iter(lnum(1,%1),die(1,15)));@dolist/inline %q<addboosts>={th u(setstat,%0,D`COMBAT`BOOSTS,%i0,add(u(getstat,%0,D`COMBAT`BOOSTS,%i0),1));&D`COMBAT`BOOSTS`EXTRA %0=setunion(get(%0/D`COMBAT`BOOSTS`EXTRA),%i0)};@pemit %0=[ansi(g,COMBAT:)] %2 Gained Boosts: [itemize(iter(%q<addboosts>,get(u(cobj,csys)/BOOST`%i0),%b,|),|,and,\,)]
+
+@@ - DEFEND
+&INC`COMBAT`DEFEND`MAIN [u(cobj,csys)]=@attach %!/INC`COMBAT`DEFEND`MAIN`TARGET;@attach %!/INC`COMBAT`DEFEND`MAIN`CALCULATE;@attach %!/INC`COMBAT`DEFEND`MAIN`STRIKE;@attach %!/INC`COMBAT`DEFEND`MAIN`ENDTURN;@attach %!/INC`COMBAT`DEFEND`MAIN`DEBUG
+
+&INC`COMBAT`DEFEND`MAIN`TARGET [u(cobj,csys)]=@check nattr(%#/D`COMBAT`**)=@attach %!/INC`MSG=ERROR: You are not combat ready. Make sure your Pilot/Mecha are set and use +reset.;@stop gte(get(%#/D`COMBAT`DAMAGE),get(%#/D`COMBAT`HEALTH))=@attach %!/INC`MSG=ERROR: The defeated can do no such thing!;@check nattr(%#/D`COMBAT`Q`*)=@attach %!/INC`MSG=ERROR: You have no attacks to deal with!;@check strlen(%0)=@attach %!/INC`MSG=ERROR: Nobody entered to defend against.;@check isdbref(u(setr`%va,atker,namegrab(iter(lattr(%#/D`COMBAT`Q`*),last(%i0,`)),%0)))=@attach %!/INC`MSG=ERROR: No Attacker called '%0'!;th u(setq`%va,atk,D`COMBAT`Q`%q<atker>);@check strlen(%2)=@attach %!/INC`MSG=ERROR: No defense method entered.;@attach %!/INC`PARTIAL=%2,AVOID|BLOCK|COOL|STEADY|ALLOW|SURRENDER,|,defchoice;@select/inline %q<defchoice>=SURRENDER,{@attach %!/INC`VERIFY=VERIFYING that you wish this attack to DEFEAT YOU. Are you sure? Defend again within 10 seconds to confirm.,SURRENDER %q<atk>},ALLOW,{@attach %!/INC`VERIFY=VERIFYING that you wish this attack to strike with full power. Are you sure? Defend again within 10 seconds to confirm.,ALLOW %q<atk>},STEADY,{@attach %!/INC`SETEFFECT=%#,12};@dolist/inline MODE POWER ACCURACY TARGETHEAT={th u(setq`%va,%i0,get(%#/%q<atk>`%i0))}
+
+&DYNAMIC [u(cobj,csys)]=add(u(ladd,iter(get(%0/D`COMBAT`ACTIVE_EFFECTS`%1),udefault(%!/EFFECT`[before(%i0,~)]`%2,0,%0),|,%b)),u(ladd,iter(get(%0/D`COMBAT`ACTIVE_BOOSTS`%1),udefault(%!/BOOST`[before(%i0,~)]`%2,0,%0),|,%b)),u(ladd,iter(get(%0/D`COMBAT`ABILITIES`%1),udefault(%!/ABIL`[before(%i0,~)]`%2,0,%0,after(%i0,~)),|,%b)))
+
+&INC`COMBAT`DEFEND`MAIN`CALCULATE [u(cobj,csys)]=th u(setq`%va,bonuses,add(get(%#/D`COMBAT`BONUSES`ALL_DEFENSE),get(%#/D`COMBAT`BONUSES`%q<mode>_DEFENSE),if(strmatch(%q<defchoice>,AVOID),get(%#/D`COMBAT`DEFENSE`AVOID)),u(dynamic,%#,DEFENSE,DEFENSE),u(heatbonus,%#)));th u(setq`%va,multiplier,add(get(%#/D`COMBAT`BONUSES`ALL_DEFENSE`MULTIPLIER),get(%#/D`COMBAT`BONUSES`%q<mode>_DEFENSE`MULTIPLIER),get(%#/D`COMBAT`BONUSES`ALL_%q<mode>`MULTIPLIER),if(strmatch(%q<defchoice>,BLOCK),get(%#/D`COMBAT`DEFENSE`BLOCK),0),u(dynamic,%#,DEFENSE,DEFENSE`MULTIPLIER)));th u(setq`%va,atkcheck,add(u(setr,atkroll,u(rollkeep,div(get(%#/%q<atk>`POWER),10),div(get(%#/%q<atk>`ACCURACY),10))),u(setr`%va,atkover,floor(mul(0.5,add(mod(get(%#/%q<atk>`POWER),10),mod(get(%#/%q<atk>`ACCURACY),10))))),u(setr`%va,atkbon,get(%#/%q<atk>`BONUSES))));th u(setq`%va,defcheck,if(cor(cand(gte(get(%#/D`COMBAT`HEAT),100),not(match(get(%#/D`COMBAT`ACTIVE_BOOSTS),8))),match(ALLOW SURRENDER,%q<defchoice>)),0,add(3,u(setr`%va,defroll,lmath(add,u(rollkeep,div(u(setr`%va,evasion,get(%#/D`COMBAT`STATS`FINAL`[switch(%q<mode>,MELEE,AGI,RANGED,MOB)])),10),div(u(setr`%va,defense,get(%#/D`COMBAT`STATS`FINAL`[switch(%q<mode>,MELEE,DEF,RANGED,ARM)])),10),1))),u(setr`%va,defover,floor(mul(0.5,add(mod(%q<evasion>,10),mod(%q<defense>,10))))),%q<bonuses>)));th u(setq`%va,rescheck,sub(%q<atkcheck>,%q<defcheck>));th u(setq`%va,finalres,fdiv(%q<rescheck>,%q<defcheck>));th u(setq`%va,result,if(not(%q<defcheck>),1.0,switch(1,gte(%q<finalres>,0.26),1.0,gte(%q<finalres>,0),0.7,lte(%q<finalres>,-0.31),0,0.4)));@select/inline cand(match(get(%#/%q<atk>`EFFECTS),25),gte(%q<targetheat>,80),lt(%q<result>,1.0))=1,{th u(setq`%va,result,1.0)};@select/inline t(get(%#/%q<atk>`AUTORES))=1,{th u(setq`%va,result,get(%#/%q<atk>`AUTORES))};@select/inline cand(cor(match(get(%#/D`COMBAT`TYPEGUARD),get(%#/%q<atk>`TYPE)),cand(words(get(%#/D`COMBAT`TYPEGUARD)),get(%#/%q<atk>`FREE))),gt(%q<result>,0.7))=1,{th u(setq`%va,result,0.7)};@select/inline cand(match(get(%#/D`COMBAT`ACTIVE_BOOSTS),15),strmatch(Cool,u(heatstatus,%#,1)),not(match(ALLOW SURRENDER,%q<defchoice>)))=1,{th u(setq`%va,result,0.0)};th u(setq`%va,damage,if(match(SURRENDER,%q<defchoice>),99999999999,mul(add(switch(get(%#/%q<atk>`LEVEL),1,200,2,500,3,1000,4,1500,5,2000,6,2500,7,3000,8,3500,9,4000,10,4500),null(die(1,100))),%q<result>,add(1,u(setr`%va,atkmul,get(%#/%q<atk>`MULTIPLIER)),mul(-1,%q<multiplier>)))));
+
+@@ &INC`COMBAT`DEFEND`MAIN`CALCULATE [u(cobj,csys)]=th u(setq`%va,bonuses,add(get(%#/D`COMBAT`BONUSES`ALL_DEFENSE),get(%#/D`COMBAT`BONUSES`%q<mode>_DEFENSE),get(%#/D`COMBAT`BONUSES`ALL_%q<mode>),if(strmatch(%q<defchoice>,AVOID),get(%#/D`COMBAT`DEFENSE`AVOID)),if(cand(u(abil,%#,5),not(cor(u(effect,%#,1),u(effect,%#,2),u(effect,%#,3),u(effect,%#,4)))),6,0),if(u(abil,%#,13),switch(u(healthbonus,%#),2,5,4,10,6,15,0)),if(u(abil,%#,19),switch(randword(A A B),A,8,B,-2)),if(u(effect,%#,1),-3,0),if(u(effect,%#,3),-5,0),if(u(effect,%#,7),4,0),get(%#/D`COMBAT`BONUSES`[get(%#/%q<atk>`TYPE)]_DEFENSE),u(heatbonus,%#),if(match(u(boost,%#,8),D),-5,0),if(u(boost,%#,9),5,0),if(u(boost,%#,11),10,0),if(u(effect,%#,13),-2,0)));th u(setq`%va,multiplier,add(get(%#/D`COMBAT`BONUSES`ALL_DEFENSE`MULTIPLIER),get(%#/D`COMBAT`BONUSES`%q<mode>_DEFENSE`MULTIPLIER),get(%#/D`COMBAT`BONUSES`ALL_%q<mode>`MULTIPLIER),if(strmatch(%q<defchoice>,BLOCK),if(u(abil,%#,14),0.25,0.15),0),if(u(boost,%#,4),0.25,0),if(u(effect,%#,8),0.1,0),if(u(boost,%#,11),0.1,0),if(match(u(boost,%#,8),D),-0.15,0),if(cand(u(abil,%#,42),gt(u(percent,%#),0.5)),0.3,0)));th u(setq`%va,atkcheck,add(u(setr,atkroll,u(rollkeep,div(get(%#/%q<atk>`POWER),10),div(get(%#/%q<atk>`ACCURACY),10))),u(setr`%va,atkover,floor(mul(0.5,add(mod(get(%#/%q<atk>`POWER),10),mod(get(%#/%q<atk>`ACCURACY),10))))),u(setr`%va,atkbon,get(%#/%q<atk>`BONUSES))));th u(setq`%va,defcheck,if(cor(cand(gte(get(%#/D`COMBAT`HEAT),100),not(strmatch(u(boost,%#,8),Y))),match(ALLOW SURRENDER,%q<defchoice>)),0,add(3,u(setr`%va,defroll,lmath(add,u(rollkeep,div(u(setr`%va,evasion,get(%#/D`COMBAT`STATS`FINAL`[switch(%q<mode>,MELEE,AGI,RANGED,MOB)])),10),div(u(setr`%va,defense,get(%#/D`COMBAT`STATS`FINAL`[switch(%q<mode>,MELEE,DEF,RANGED,ARM)])),10),1))),u(setr`%va,defover,floor(mul(0.5,add(mod(%q<evasion>,10),mod(%q<defense>,10))))),%q<bonuses>)));th u(setq`%va,rescheck,sub(%q<atkcheck>,%q<defcheck>));th u(setq`%va,finalres,fdiv(%q<rescheck>,%q<defcheck>));th u(setq`%va,result,if(not(%q<defcheck>),1.0,switch(1,gte(%q<finalres>,0.21),1.0,gte(%q<finalres>,0),0.6,lte(%q<finalres>,-0.21),0,0.3)));@select/inline cand(match(get(%#/D`COMBAT`TYPEGUARD),get(%#/%q<atk>`TYPE)),gt(%q<result>,0.7))={th u(setq`%va,result,0.7)};th u(setq`%va,damage,if(match(SURRENDER,%q<defchoice>),99999999999,mul(add(switch(get(%#/%q<atk>`LEVEL),1,200,2,500,3,1000,4,1500,5,2000,6,2500,7,3000,8,3500,9,4000,10,4500),null(die(1,100))),%q<result>,add(1,u(setr`%va,atkmul,get(%#/%q<atk>`MULTIPLIER)),mul(-1,%q<multiplier>)))));
+
+&INC`COMBAT`DEFEND`MAIN`STRIKE [u(cobj,csys)]=th u(setq`%va,boss,default(%#/D`COMBAT`BOSS,1));@select/inline t(%q<result>)=1,{@attach %!/INC`DAMAGE=%#,floor(%q<damage>),,if(gt(%q<boss>,1),ansi(hr,<BOSS-%q<boss>>%B))[ansi(hw,%n)] attempts to [capstr(switch(%q<defchoice>,allow,block,surrender,block,%q<defchoice>))] [ansi(hw,name(%q<atker>))]'s [get(%#/%q<atk>)]! %S's struck by a [ansi(hr,switch(%q<result>,0.4,Graze,0.7,Hit,1.0,CRITICAL HIT))] for [ansi(hr,floor(%q<damage>))] Damage!;@dolist/inline/nobreak setunion(get(%#/%q<atk>`EFFECTS`TARGET),get(%#/%q<atk>`EXTARGEFFS))={@select/inline match(v(EFFECT`%i0`CATEGORIES),debuff)=>0,{@check lte(rand(0,100),switch(%q<result>,0.4,50,0.7,75,1.0,100))};;@attach %!/INC`SETEFFECT=%#,%i0}},0,{@remit %l=[ansi(g,COMBAT:)] [if(gt(%q<boss>,1),ansi(hr,<BOSS-%q<boss>>%B))][ansi(hw,%n)] attempts to [capstr(switch(%q<defchoice>,allow,block,surrender,block,%q<defchoice>))] [ansi(hw,name(%q<atker>))]'s [get(%#/%q<atk>)]! [switch(%q<defchoice>,avoid,Evasion successful!,The attack completely misses %n!)]};@attach %!/INC`COOL=%#,add(get(%#/D`COMBAT`HEAT`DISSIPATE),if(match(COOL,%q<defchoice>),get(%#/D`COMBAT`DEFENSE`COOL),0)),Routine Dissipation;@attach %!/WIPE=%#,%q<atk>;
+
+&INC`COMBAT`DEFEND`MAIN`ENDTURN [u(cobj,csys)]=@attach %!/INC`COMBAT`DEFEND`MAIN`ENDTURN`BOOSTS=%#;@attach %!/INC`COMBAT`DEFEND`MAIN`ENDTURN`EFFECTS=%#;
+
+&INC`COMBAT`DEFEND`MAIN`ENDTURN`BOOSTS [u(cobj,csys)]=@dolist/inline/nobreak/delimit | [get(%0/D`COMBAT`ACTIVE_BOOSTS`DEFENSE)]={th u(setq`%va,eid,before(%i0,~));th u(setq`%va,rem,after(%i0,~));@select/inline %q<rem>=1,{th u(delstat,%0,D`COMBAT`ACTIVE_BOOSTS`DEFENSE,%q<eid>);th u(setq`%va,endboostsdef,setunion(%q<endboostsdef>,%q<eid>));@select/inline t(u(getstat,%0,D`COMBAT`ACTIVE_BOOSTS`ATTACK,%q<eid>))=0,{th u(setq`%va,endboosts,setunion(%q<endboosts>,%q<eid>));&D`COMBAT`ACTIVE_BOOSTS %0=setdiff(get(%0/D`COMBAT`ACTIVE_BOOSTS),%q<eid>)};@attach %!/BOOST`%q<eid>`DEACTIVATE=%0},>1,{th u(setstat,%0,D`COMBAT`ACTIVE_BOOSTS`DEFENSE,%q<eid>,sub(%q<rem>,1))}};@select/inline words(setinter(%q<endboosts>,%q<endboostsdef>))=>0,{@pemit %0=[ansi(g,COMBAT:)] Boosts wore off: [iter(setinter(%q<endboosts>,%q<endboostsdef>),default(%!/BOOST`%i0,<Unknown>),%b,\,%b)]};@select/inline words(setdiff(%q<endboostsdef>,%q<endboosts>))=>0,{@pemit %0=[ansi(g,COMBAT:)] Defense aspects of Boosts wore off: [iter(setdiff(%q<endboostsdef>,%q<endboosts>),default(%!/BOOST`%i0,<Unknown>),%b,\,%b)]. Offense aspects remain.}
+
+&INC`COMBAT`DEFEND`MAIN`ENDTURN`EFFECTS [u(cobj,csys)]=@dolist/inline/nobreak/delimit | [get(%0/D`COMBAT`ACTIVE_EFFECTS`DEFENSE)]={th u(setq`%va,eid,before(%i0,~));th u(setq`%va,rem,after(%i0,~));@select/inline %q<rem>=1,{th u(delstat,%0,D`COMBAT`ACTIVE_EFFECTS`DEFENSE,%q<eid>);th u(setq`%va,endEFFECTSdef,setunion(%q<endEFFECTSdef>,%q<eid>));@select/inline t(u(getstat,%0,D`COMBAT`ACTIVE_EFFECTS`ATTACK,%q<eid>))=0,{th u(setq`%va,endEFFECTS,setunion(%q<endEFFECTS>,%q<eid>));@dolist/inline ACTIVE_EFFECTS ACTIVE_EFFECTS`BUFFS ACTIVE_EFFECTS`DEBUFFS={&D`COMBAT`%i0 %0=setdiff(get(%0/D`COMBAT`%i0),%q<eid>)}};@attach %!/EFFECT`%q<eid>`ON_REMOVE=%0},>1,{th u(setstat,%0,D`COMBAT`ACTIVE_EFFECTS`DEFENSE,%q<eid>,sub(%q<rem>,1))}};@select/inline words(setinter(%q<endEFFECTS>,%q<endEFFECTSdef>))=>0,{@pemit %0=[ansi(g,COMBAT:)] Effects wore off: [iter(setinter(%q<endEFFECTS>,%q<endEFFECTSdef>),default(%!/EFFECT`%i0,<Unknown>),%b,\,%b)]};@select/inline words(setdiff(%q<endEFFECTSdef>,%q<endEFFECTS>))=>0,{@pemit %0=[ansi(g,COMBAT:)] Defense aspects of Effects wore off: [iter(setdiff(%q<endEFFECTSdef>,%q<endEFFECTS>),default(%!/EFFECT`%i0,<Unknown>),%b,\,%b)]. Offense aspects remain.}
+
+&INC`COMBAT`DEFEND`MAIN`DEBUG [u(cobj,csys)]=th u(setq`%va,testers,u(filter,TESTER,lplayers(%l)));@pemit/list %q<testers>=center(Debug,78,ansi(hm,=))%R[align(7 7 7 7 7 7 7 7 7 6,AtkRoll,AtkBon,AtkMul,DefRoll,DefBon,DefMul,AtkChk,DefChk,Delta,HitMul)]%R[align(7 7 7 7 7 7 7 7 7 6,%q<atkroll>+%q<atkover>,%q<atkbon>,if(strmatch(%q<atkmul>,-*),mul(%q<atkmul>,100),+[mul(%q<atkmul>,100)])\%,%q<defroll>+%q<defover>+3,%q<bonuses>,if(strmatch(%q<multiplier>,-*),mul(%q<multiplier>,100),+[mul(%q<multiplier>,100)])\%,%q<atkcheck>,%q<defcheck>,left(%q<finalres>,6),%q<result>)]%R[ansi(hm,repeat(-,78))]
+
+&FIL`TESTER [u(cobj,csys)]=cand(elock(#997/Basic,%0),get(%0/D`MATRIX),hasflag(%0,CONNECTED))
+
+&HEATBONUS [u(cobj,csys)]=localize(u(setq`%va,heatbon,switch(u(heatstatus,%0),Override,0,Cool,2,Warm,0,Critical,-2,Overheating,-6,Shutdown,-6,Cooked,-6,Baked,-18,Detonate,-6))[if(cand(lt(%q<heatbon>,0),not(%1)),mul(default(%0/D`COMBAT`HEAT`PENALTY_MULTIPLIER,1),%q<heatbon>),%q<heatbon>)])
+
+&HEATSTATUS [u(cobj,csys)]=if(cand(not(%1),match(get(%0/D`COMBAT`ACTIVE_BOOSTS),8)),Override,switch(get(%0/D`COMBAT`HEAT),<21,Cool,<51,Warm,<81,Critical,<100,Overheating,<125,Shutdown,<150,Cooked,<200,Baked,Detonate))
+
+&OVERHEAT [u(cobj,csys)]=mul(default(%0/D`COMBAT`HEAT`PENALTY_MULTIPLIER,1),switch(u(HEATSTATUS,%0),Overheating,0.1,Shutdown,0.1,Cooked,0.2,Baked,0.2,Detonate,999.0,0))
+
+&INC`SETEFFECT [u(cobj,csys)]=@select/inline u(setr`%va,ling,or(u(setr`%va,deftrn,default(%!/EFFECT`%1`DEFENSE_TURNS,0)),u(setr`%va,atktrn,default(%!/EFFECT`%1`ATTACK_TURNS,0))))=1,{@pemit %0=[ansi(g,COMBAT:)] Gained Effect: [ansi(h,v(EFFECT`%1))]!;&D`COMBAT`ACTIVE_EFFECTS %0=setunion(get(%0/D`COMBAT`ACTIVE_EFFECTS),%1)};@attach %!/EFFECT`%1`ON_APPLY=%0;@select/inline %q<atktrn>=>0,{th u(setstat,%0,D`COMBAT`ACTIVE_EFFECTS`ATTACK,%1,%q<atktrn>)};@select/inline %q<deftrn>=>0,{th u(setstat,%0,D`COMBAT`ACTIVE_EFFECTS`DEFENSE,%1,%q<deftrn>)};@select/inline cand(%q<ling>,match(v(EFFECT`%1`CATEGORIES),debuff))=>0,{&D`COMBAT`ACTIVE_EFFECTS`DEBUFFS %0=setunion(get(%0/D`COMBAT`ACTIVE_EFFECTS`DEBUFFS),%1)};@select/inline cand(%q<ling>,match(v(EFFECT`%1`CATEGORIES),buff))=>0,{&D`COMBAT`ACTIVE_EFFECTS`BUFFS %0=setunion(get(%0/D`COMBAT`ACTIVE_EFFECTS`BUFFS),%1)};
+
+&PERCENT [u(cobj,csys)]=fdiv(sub(get(%0/D`COMBAT`HEALTH),get(%0/D`COMBAT`DAMAGE)),get(%0/D`COMBAT`HEALTH))
+&HEALTHBONUS [u(cobj,csys)]=switch(u(percent,%0),<0.26,15,<0.51,10,<0.76,5,>=0.76,0)
+
+&ROLLKEEP [u(cobj,csys)]=localize(if(gt(%1,%0),u(setq`%va,roll,ceil(fdiv(add(%0,%1),2)))[u(setq`%va,keep,floor(fdiv(add(%0,%1),2)))],u(setq`%va,roll,%0)[u(setq`%va,keep,%1)])[u(setq`%va,result,elements(sort(die(%q<roll>,10,1),-n),lnum(1,%q<keep>)))][if(%2,%q<result>,lmath(add,%q<result>))])
+
+@@ BOOST CODE
+&INC`COMBAT`BOOST`MAIN [u(cobj,csys)]=th u(setq`%va,boss,default(%#/D`COMBAT`BOSS,1));@check nattr(%#/D`COMBAT`**)=@attach %!/INC`MSG=ERROR: You are not combat ready. Make sure your Pilot/Mecha are set and use +reset.;@stop gte(get(%#/D`COMBAT`DAMAGE),get(%#/D`COMBAT`HEALTH))=@attach %!/INC`MSG=ERROR: The defeated can do no such thing!;@check strlen(get(%#/D`COMBAT`BOOSTS))=@attach %!/INC`MSG=ERROR: You have no Boosts to activate!;@check strlen(%0)=@attach %!/INC`MSG=ERROR: No boost entered to activate.;@attach %!/INC`PARTIAL=%0,iter(get(%#/D`COMBAT`BOOSTS),get(u(cobj,csys)/BOOST`[before(%i0,~)]),|,|),|,boost;@check u(setr`%va,boost_id,match(REBOOT|FLUSH|VENT|GUARD|FOCUS|RELOAD|GRIT|OVERRIDE|PURGE|ALL-IN|GO TO GROUND|CLOSER|TRUST|STUBBORN|FLICKER,%q<boost>,|))=@attach %!/INC`MSG=ERROR: Code Error. Cannot find Boost ID.;@check u(setr`%va,remaining,u(getstat,%#,D`COMBAT`BOOSTS,%q<boost_id>))=@attach %!/INC`MSG=ERROR: That Boost has been depleted!;@remit %l=[ansi(g,COMBAT:)] [if(gt(%q<boss>,1),ansi(hr,<BOSS-%q<boss>>%B))]%n uses a Boost!;@pemit %#=[ansi(g,COMBAT:)] You used Boost: %q<boost>;@attach/nobreak %!/BOOST`%q<boost_id>`ACTIVATE=%#;th u(setstat,%#,D`COMBAT`BOOSTS,%q<boost_id>,sub(%q<remaining>,1));th u(setstat,%#,D`COMBAT`BOOSTS`USED,%q<boost_id>,add(u(getstat,%#,D`COMBAT`BOOSTS`USED,%q<boost_id>),1))
+
+&INC`HEAL [u(cobj,csys)]=&D`COMBAT`DAMAGE %0=bound(sub(get(%0/D`COMBAT`DAMAGE),u(setr`%va,regain,%1)),0,get(%0/D`COMBAT`HEALTH));@pemit %0=[ansi(g,COMBAT:)] You gained %1 Health from: %2
+
+&INC`COOL [u(cobj,csys)]=&D`COMBAT`HEAT %0=bound(sub(get(%0/D`COMBAT`HEAT),%1),0,9999999);@pemit %0=[ansi(g,COMBAT:)] You lost %1 Heat thanks to: %2. Current Status: [u(heatstatus,%0)]
+
+&INC`HEAT [u(cobj,csys)]=&D`COMBAT`HEAT %0=bound(add(get(%0/D`COMBAT`HEAT),%1),0,9999999);@pemit %0=[ansi(g,COMBAT:)] You gained %1 Heat from: %2. Current Status: [u(heatstatus,%0)]
+
+&INC`SETBOOST [u(cobj,csys)]=&D`COMBAT`ACTIVE_BOOSTS %0=setunion(get(%0/D`COMBAT`ACTIVE_BOOSTS),%1);@dolist/inline/nobreak ATTACK DEFENSE={@check v(BOOST`%1`%i0_TURNS);th u(setstat,%0,D`COMBAT`ACTIVE_BOOSTS`%i0,%1,v(BOOST`%1`%i0_TURNS))}
+
+@@ QUEUE CODE
+&INC`COMBAT`QUEUE`MAIN [u(cobj,csys)]=@check nattr(%#/D`COMBAT`**)=@attach %!/INC`MSG=ERROR: You are not combat ready. Make sure your Pilot/Mecha are set and use +reset.;@check nattr(%#/D`COMBAT`Q`**)=@attach %!/INC`MSG=ERROR: You have no incoming attacks to deal with!;@pemit %#=u(header,Combat Queue);@pemit %#=ansi(u(color`%va,%#,COLOR,COLUMN_NAMES),align(17 18 1 10 15 12,Source,Name,L,Type,Mechanism,Effect));@pemit %#=u(separator);@dolist/inline sortkey(#lambda/get(%#/\%0`TIMESTAMP),lattr(%#/D`COMBAT`Q`*))={@pemit %#=align(17 18 1 10 15 12,u(moniker`%va,last(%i0,`)),get(%#/%i0),switch(get(%#/%i0`LEVEL),>9,S,get(%#/%i0`LEVEL)),default(%!/TYPE`[get(%#/%i0`TYPE)],<unknown>),default(%!/MECHANISM`[get(%#/%i0`MECHANISM)],<unknown>)%b\([if(match(1 2 6,get(%#/%i0`MECHANISM)),Mel,Rng)]\),iter(get(%#/%i0`EFFECTS),default(%!/EFFECT`%i0,<unknown>)))};@pemit %#=u(footer)
+
+@@ HEALTH CODE
+&INC`COMBAT`HEALTh`MAIN [u(cobj,csys)]=@check nattr(%#/D`COMBAT`**)=@attach %!/INC`MSG=ERROR: You are not combat ready. Make sure your Pilot/Mecha are set and use +reset.;@pemit %#=u(header,Combat Status - %n);@pemit %#=HEALTH: [sub(get(%#/D`COMBAT`HEALTH),get(%#/D`COMBAT`DAMAGE))]/[get(%#/D`COMBAT`HEALTH)];@pemit %#=HEAT: [get(%#/D`COMBAT`HEAT)];@pemit %#=ACTIVE BOOSTS: [itemize(iter(get(%#/D`COMBAT`ACTIVE_BOOSTS),default(%!/BOOST`[u(setr`%va,id,before(%i0,~))],<unset>)%b\([add(u(getstat,%#,D`COMBAT`ACTIVE_BOOSTS`ATTACK,%q<id>),0)]/[add(u(getstat,%#,D`COMBAT`ACTIVE_BOOSTS`DEFENSE,%q<id>),0)]\),%b,|),|,and,\,)];@pemit %#=ACTIVE EFFECTS: [itemize(iter(get(%#/D`COMBAT`ACTIVE_EFFECTS),default(%!/EFFECT`[u(setr`%va,id,before(%i0,~))],<unset>)%b\([add(u(getstat,%#,D`COMBAT`ACTIVE_EFFECTS`ATTACK,%q<id>),0)]/[add(u(getstat,%#,D`COMBAT`ACTIVE_EFFECTS`DEFENSE,%q<id>),0)]\),%b,|),|,and,\,)];@pemit %#=u(footer)
+
+
+
+@@ +bbpost 6/CSYS: Character Editor=The commands [ansi(h,+select\, +view\, +create\, +delete\, +add\, +remove\, +set\, +mode)] are the core of the Combat System editor. It works on the following principle:%R%RWhen you [ansi(h,+select)] something, this becomes your focus point, or +mode. Selecting a PLAYER with [ansi(h,+select player=<playername>)] will initialize them for the combat system, create a DEFAULT PILOT if they don't have one already, and put you in Player/Pilot Mode. (If they already HAVE a pilot, you will then need to [ansi(h,+select pilot=<pilot name or id>)] to target that.)%R%RWhile in Player/Pilot mode, the [ansi(h,+create)] command can be used to [ansi(h,+create pilot=<new pilot name>)] or [ansi(h,+create mecha=<new mecha name>)], which will shift your focus.%R%RShifting to MECHA MODE allows for [ansi(h,+create attack=<attack name>)].%R%RSimilarly, in each mode the functions of the +add, +remove, and +set commands change. For PILOT and MECHA mode, +set will let you target things like name, agi, mel, and similar properties. For example, [ansi(h,+set agi=60)]. Changes are saved immediately, but will only be reflected on players using it when they +reset.%R%RIn PLAYER or MECHA mode, the +add and +remove commands can be used to add/remove ABILITIES or BOOSTS. In ATTACK mode, it can only be used for Effects. The full list of available traits is on the csys design document, I'm not gonna list it here. Example: [ansi(h,+add abil=Attacker)]%R%RA more comprehensive guide will be written in the future, but I expect this to be intuitive enough for you guys to experiment.%R%R[ansi(hr,FOR NOW)] I have created a character called [ansi(h,MP-Holder)]. While I haven't quite worked out all the commands for handling MP Mecha and Generic Pilots, please feel free to create various pilot and mech builds on this guy. When we're ready I can mass-assign whatever's on him as generic/mp stuff for everyone to test.
+@@ (((
+@@ +bbpost 6/CSYS: Combat Commands=[ansi(h,+reset)] to get ready for combat! This will clear EVERYTHING right now. Sorry, switching pilots and mechas mid-flight isn't currently supported, although it won't be hard to add that in either. I mean you can, but you're starting the fight fresh. Not fair.%R%R[ansi(h,+boost <name>)] to activate a boost. They're listed in +stats.%R%R[ansi(h,+free <name>=<level> <type> <mechanism>)] to set a Free attack. /rem and /clear haven't been implemented yet, but entering the same name will overwrite the old entry. Free attacks are bound to your mecha and switch accordingly.%R%R[ansi(h,+attack <player>=<attack name>)] - Attack someone. You can (untested) use [ansi(h,+attack <player1>\,<player2>,\,<player3>\,...=<attack name>)] for multi-targeting. In theory.%R%R[ansi(h,+defend <attacker>=<response>)]. Where response is AVOID, BLOCK, STEADY, VENT, ALLOW, or SURRENDER.%R%RKNOWN ISSUES:%RA) There's currently no health display anywhere. Or active buffs/debuffs.%RB) Or an incoming attack display.%RC) Boss modes haven't been implemented yet.
+@@ +bbpost 6/CSYS: Approval Commands=[ansi(hc,Player Commands)]%R[ansi(h,+submit <thing>)] to submit a designed Mecha or Pilot for approval. Once submitted they cannot be modified except by admin.%R%R[ansi(hc,Admin Commands)]%R[ansi(h,+set approved=<0 or 1>)] - This is to be used when you've used the character editor and selected the relevant mecha/pilot. Setting it to 0 clears the pending review and returns it to unapproved. Setting to 1 marks it approved so players can use it.%R[ansi(h,+key/add Csys=<player>)] - adds a player to the Csys Tester list. (see below.) Use +key/rem csys=<name> to revoke tester abilities.%R%RTesters can use unapproved mechs/pilots and can toggle on/off debug displays.%R%R[ansi(hc,Tester Commands)]%R[ansi(h,+matrix)] - This command toggles on/off the debug display. Only usable by admin and Csys Testers.
