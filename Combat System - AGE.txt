@@ -47,13 +47,14 @@ th u(NEWCOBJ,Adaptive Game Engine Database <AGEDB>,agedb,,age,1,WIZARD SAFE !NO_
 
 &INC`AGE`MAIN`SET [u(cobj,age)]=@attach %!/INC`PARTIAL=%0,get(u(cobj,agedb)/CORES),|,Core;@attach %!/INC`VALID`NUMBER=%2;&CORE`%q<CORE>`CUSTOM [u(cobj,agedb)]=%q<value>;@attach %!/INC`MSG=Set AGE %q<core> to: %q<value>.;@attach %!/INC`MSG`CHAN=Set AGE Core '%q<core>' To: %q<value>
 
-&CORES [u(cobj,agedb)]=BALANCE|NORMALIZE|BASEDAMAGE|FUDGESCATTER|SCATTER|BASEHP
+&CORES [u(cobj,agedb)]=BALANCE|NORMALIZE|BASEDAMAGE|FUDGESCATTER|SCATTER_POSITIVE|SCATTER_NEGATIVE|BASEHP
 
 &CORE`BALANCE [u(cobj,agedb)]=0
 &CORE`NORMALIZE [u(cobj,agedb)]=1.3
 &CORE`BASEDAMAGE [u(cobj,agedb)]=60
 &CORE`FUDGESCATTER [u(cobj,agedb)]=5
-&CORE`SCATTER [u(cobj,agedb)]=10
+&CORE`SCATTER_POSITIVE [u(cobj,agedb)]=10
+&CORE`SCATTER_NEGATIVE [u(cobj,agedb)]=10
 &CORE`BASEHP [u(cobj,agedb)]=10000
 
 &INC`AGE`ADJECTIVE [u(cobj,age)]=@select/inline strlen(%0)=0,{@attach %!/INC`AGE`ADJECTIVE`DISPLAY},{@attach %!/INC`AGE`ADJECTIVE`SET}
@@ -1669,8 +1670,8 @@ Shooter
 
 &STATUS`PRK_STRENGTH_B [u(cobj,age)]=Follow Through
 &STATUS`PRK_STRENGTH_B`TAGS [u(Cobj,age)]=PERK DISPLAY
-&STATUS`PRK_STRENGTH_B`ATTACK_ON_CLOSE [u(Cobj,age)]=th u(addto,%q<atker>,D`COMBAT`STATUS`%1`CHARGES,1)
-&STATUS`PRK_STRENGTH_B`ATTACK_ON_MISS [u(cobj,age)]=@attach %!/STATUS`PRK_STRENGTH_B`ATTACK_ON_CLOSE
+&STATUS`PRK_STRENGTH_B`ATTACK_ON_CLOSE_MELEE [u(Cobj,age)]=th u(addto,%q<atker>,D`COMBAT`STATUS`%1`CHARGES,1)
+&STATUS`PRK_STRENGTH_B`ATTACK_ON_MISS [u(cobj,age)]=@attach %!/STATUS`PRK_STRENGTH_B`ATTACK_ON_CLOSE_MELEE
 &STATUS`PRK_STRENGTH_B`ATTACK_BEFORE_LAUCH [u(Cobj,age)]=@select/inline t(get(%0/D`COMBAT`STATUS`%1`CHARGES))=1,{@attach %!/INC`SETSTATUS=%0,%0,PRK_STRENGTH_B_ACTIVE,,1,0;th u(addto,%0,D`COMBAT`STATUS`%1`CHARGES,-1)}
 
 &STATUS`PRK_STRENGTH_B_ACTIVE [u(cobj,age)]=Follow Through
@@ -1679,7 +1680,11 @@ Shooter
 
 &STATUS`PRK_STRENGTH_A [u(cobj,age)]=Crushing Blow
 &STATUS`PRK_STRENGTH_A`TAGS [u(Cobj,age)]=PERK DISPLAY
-@@ Unfinished...
+&STATUS`PRK_STRENGTH_A`ATTACK_ON_CALCULATE [u(cobj,age)]=@select/inline cand(match(MELEE SPECIAL,%q<atkmode>),gte(%q<atklevel>,6))=1,{@attach %!/INC`SETSTATUS=%#,%q<atker>,PRK_STRENGTH_A_ACTIVE,,0,1}
+
+&STATUS`PRK_STRENGTH_A_ACTIVE [u(cobj,age)]=Crushing Blow
+&STATUS`PRK_STRENGTH_A_ACTIVE`DEFENSE`PENALTY`STAT`4 [u(cobj,age)]=localize(if(gt(u(setr,gnum,get(%#/D`COMBAT`STATS`4`GRADENUM)),1),sub(u(statmap,%q<gnum>),u(statmap,sub(%q<gnum>,1))))
+
 
 &STATUS`PRK_STRENGTH_S [u(cobj,age)]=Fatal Strike
 &STATUS`PRK_STRENGTH_S`TAGS [u(Cobj,age)]=PERK DISPLAY
@@ -1689,22 +1694,22 @@ Shooter
 &STATUS`PRK_SKILL_D [u(cobj,age)]=Swift Stance
 &STATUS`PRK_SKILL_D`TAGS [u(cobj,age)]=PERK DISPLAY
 &STATUS`PRK_SKILL_D`STATUS`REA_TARGET`DEFENSE`HEAT_COST [u(Cobj,age)]=-5
-&STATUS`PRK_SKILL_D`ATTACK`CRITICAL_ATTACK`CHANCE [u(Cobj,age)]=0.05
+&STATUS`PRK_SKILL_D`ATTACK`CRITICAL_ATTACK`CHANCE [u(Cobj,age)]=5
 
 &STATUS`PRK_SKILL_C [u(Cobj,age)]=Lethal Hits
 &STATUS`PRK_SKILL_C`TAGS [u(cobj,age)]=PERK DISPLAY
-&STATUS`PRK_SKILL_C`ATTACK`CRITICAL_ATTACK`CHANCE [u(Cobj,age)]=0.1
+&STATUS`PRK_SKILL_C`ATTACK`CRITICAL_ATTACK`CHANCE [u(Cobj,age)]=10
 &STATUS`PRK_SKILL_C`ATTACK`BONUS`STAT`1 [u(Cobj,age)]=Minor
 &STATUS`PRK_SKILL_C`ATTACK`BONUS`STAT`3 [u(Cobj,age)]=Minor
 
 &STATUS`PRK_SKILL_B [u(cobj,age)]=Mind's Eye
 &STATUS`PRK_SKILL_B`TAGS [u(Cobj,age)]=PERK DISPLAY
-&STATUS`PRK_SKILL_B`ATTACK_ON_STRIKE [u(Cobj,age)]=th u(addto,%q<atker>,D`COMBAT`ACTIVE`STATUS`PRK_SKILL_B`CHARGES,1)
+&STATUS`PRK_SKILL_B`ATTACK_ON_STRIKE_MELEE [u(Cobj,age)]=th u(addto,%q<atker>,D`COMBAT`ACTIVE`STATUS`PRK_SKILL_B`CHARGES,1)
 &STATUS`PRK_SKILL_B`ATTACK_BEFORE_LAUNCH [u(Cobj,age)]=@select/inline t(get(%0/D`COMBAT`ACTIVE`STATUS`PRK_SKILL_B`CHARGES))=1,{@attach %!/INC`SETSTATUS=%0,%0,PRK_SKILL_B_ACTIVE,CHARGES=[get(%0/D`COMBAT`ACTIVE`STATUS`PRK_SKILL_B`CHARGES)],1,0;th u(addto,%0,D`COMBAT`ACTIVE`STATUS`PRK_SKILL_B`CHARGES,-1)}
 
 &STATUS`PRK_SKILL_B_ACTIVE [u(cobj,age)]=Mind's Eye
-&STATUS`PRK_SKILL_B_ACTIVE`ATTACK`CRITICAL_ATTACK`CHANCE [u(cobj,age)]=mul(0.05,get(%0/D`COMBAT`STATUS`%1`CHARGES))
-&STATUS`PRK_SKILL_B_ACTIVE`ATTACK`BONUS`POWER [u(cobj,age)]=mul(0.1,get(%0/D`COMBAT`STATUS`%1`CHARGES))
+&STATUS`PRK_SKILL_B_ACTIVE`ATTACK`CRITICAL_ATTACK`CHANCE [u(cobj,age)]=mul(5,get(%#/%q<atk>`ACTIVE`STATUS`%1`CHARGES))
+&STATUS`PRK_SKILL_B_ACTIVE`ATTACK`BONUS`POWER [u(cobj,age)]=mul(0.1,get(%#/%q<atk>`ACTIVE`STATUS`%1`CHARGES))
 
 &STATUS`PRK_SKILL_A [u(cobj,age)]=Targeted Strike
 &STATUS`PRK_SKILL_A`TAGS [u(cobj,age)]=PERK DISPLAY
@@ -1721,9 +1726,9 @@ Shooter
 &STATUS`PRK_SKILL_S [u(cobj,age)]=Flow State
 &STATUS`PRK_SKILL_S`TAGS [u(cobj,age)]=PERK DISPLAY
 &STATUS`PRK_SKILL_S [u(cobj,age)]=Flow State
-&STATUS`PRK_SKILL_S`ATTACK`CRITICAL_ATTACK`CHANCE [u(Cobj,age)]=if(gte(get(%0/D`COMBAT`ACTIVE`STATUS`PRK_SKILL_B`CHARGES),3),0.1)
-&STATUS`PRK_SKILL_S`ATTACK`BONUS`STAT`5 [u(cobj,age)]=if(gte(get(%0/D`COMBAT`ACTIVE`STATUS`PRK_SKILL_B`CHARGES),3),Moderate)
-&STATUS`PRK_SKILL_S`ATTACK`BONUS`STAT`7 [u(cobj,age)]=if(gte(get(%0/D`COMBAT`ACTIVE`STATUS`PRK_SKILL_B`CHARGES),3),Moderate)
+&STATUS`PRK_SKILL_S`ATTACK`CRITICAL_ATTACK`CHANCE [u(Cobj,age)]=if(gte(get(%#/%q<atk>``ACTIVE`STATUS`PRK_SKILL_B`CHARGES),3),10)
+&STATUS`PRK_SKILL_S`ATTACK`BONUS`STAT`5 [u(cobj,age)]=if(gte(get(%#/%q<atk>`ACTIVE`STATUS`PRK_SKILL_B`CHARGES),3),Moderate)
+&STATUS`PRK_SKILL_S`ATTACK`BONUS`STAT`7 [u(cobj,age)]=if(gte(get(%#/%q<atk>`ACTIVE`STATUS`PRK_SKILL_B`CHARGES),3),Moderate)
 
 @@ Firepower Perks
 &STATUS`PRK_FIREPOWER_D [u(cobj,age)]=Siege Stance
@@ -1733,38 +1738,43 @@ Shooter
 
 &STATUS`PRK_FIREPOWER_C [u(cobj,age)]=High Calibre
 &STATUS`PRK_FIREPOWER_C`TAGS [u(cobj,age)]=PERK DISPLAY
-&STATUS`PRK_FIREPOWER_C`ATTACK`BONUS`SCATTER [u(Cobj,age)]=0.33
+&STATUS`PRK_FIREPOWER_C`DAMAGE_SCATTER`POSITIVE_INCREASE [u(Cobj,age)]=1.33
+&STATUS`PRK_FIREPOWER_C`DAMAGE_SCATTER`NEGATIVE_DECREASE [u(Cobj,age)]=0.66
+
+&SCATTER [u(cobj,age)]=if(cor(rand(0,1),%1),fdiv(mul(%0,1.[rjust(rand(0,u(CUST,CORE,SCATTER_POSITIVE)),2,0)],if(%2,%2,1),if(%3,%3,1)),100),fdiv(mul(%0,-1,1.[rjust(rand(0,u(CUST,CORE,SCATTER_NEGATIVE)),2,0)],if(%4,%4,1),if(%5,%5,1)),100))
+@@ %0 - Input value. %1 - bool to block negatives. %2 - Scatter Positive Increase mul. %3 - Scatter Positive Decrease Mul. %4 - Scatter Negative Increase Mul. %5 - Scatter negative decrease mul.
 
 &STATUS`PRK_FIREPOWER_B [u(cobj,age)]=Full Barrage
 &STATUS`PRK_FIREPOWER_B`TAGS [u(cobj,age)]=PERK DISPLAY
 &STATUS`PRK_FIREPOWER_B`ATTACK`CRITICAL_ATTACK`DAMAGE [u(Cobj,age)]=0.05
 &STATUS`PRK_FIREPOWER_B`ATTACK`BONUS`POWER [u(cobj,age)]=if(gte(%q<hitmul>,0.7),mul(0.1,sub(get(%0/%q<atk>`STATS`2),1)))
-&STATUS`PRK_FIREPOWER_B`ATTACK_INCREASE_HITMUL [u(cobj,age)]=@select/inline cand(strmatch(%q<atkmode>,RANGED),lte(u(setr,barrand,rand(1,100)),30))=1,{th u(setq,hitmul,0.7);@attach %!/INC`EANNOUNCE=FULL BARRAGE,[ansi(hw,name(%q<atker>))] fills the skies with danger\, leaving little room to dodge! Strike upgraded from a Close Call to a Solid Hit!;@attach %!/INC`DEBUG=FULL BARRAGE,Attack Increase Hitmul Rand: %q<barrand>/30};th unsetq(barrand)
+&STATUS`PRK_FIREPOWER_B`ATTACK_INCREASE_HITMUL [u(cobj,age)]=@select/inline cand(match(RANGED SPECIAL,%q<atkmode>),lte(u(setr,barrand,rand(1,100)),30),eq(%q<hitmul>,0.4))=1,{th u(setq,hitmul,0.7);@attach %!/INC`EANNOUNCE=FULL BARRAGE,[ansi(hw,name(%q<atker>))] fills the skies with danger\, leaving little room to dodge! Strike upgraded from a Close Call to a Solid Hit!;@attach %!/INC`DEBUG=FULL BARRAGE,Attack Increase Hitmul Rand: %q<barrand>/30};th unsetq(barrand)
 
 &STATUS`PRK_FIREPOWER_A [u(cobj,age)]=Specialty Ammo
 &STATUS`PRK_FIREPOWER_A`TAGS [u(cobj,age)]=PERK DISPLAY
-&STATUS`PRK_FIREPOWER_A`ATTACK`BONUS`POWER [u(cobj,age)]=if(%q<atkpowerbonus>,0.35)
+&STATUS`PRK_FIREPOWER_A`ATTACK`BONUS`POWER [u(cobj,age)]=if(cand(%q<atkpowerbonus>,match(SPECIAL RANGED,%q<atkmode>)),0.35)
 
 &STATUS`PRK_FIREPOWER_S [u(cobj,age)]=Alpha Strike
 &STATUS`PRK_FIREPOWER_S`TAGS [u(cobj,age)]=PERK DISPLAY
-&STATUS`PRK_FIREPOWER_S`ATTACK_POST_DAMAGE [u(cobj,age)]=@select/inline gte(%q<atkpower>,8)=1,{@select/inline u(setr,alphaheat,div(%q<damage>,100))=>0,{@attach %!/INC`HEAT=%0,%q<alphaheat>,Alpha Strike}}
+&STATUS`PRK_FIREPOWER_S`ATTACK_POST_DAMAGE [u(cobj,age)]=@select/inline cand(match(RANGED SPECIAL,%q<atkmode>),gte(%q<atkpower>,8))=1,{@select/inline u(setr,alphaheat,div(%q<damage>,100))=>0,{@attach %!/INC`HEAT=%0,%q<alphaheat>,Alpha Strike}}
 
 @@ Aim Perks
 &STATUS`PRK_AIM_D [u(cobj,age)]=Shooting Stance
 &STATUS`PRK_AIM_D`TAGS [u(cobj,age)]=PERK DISPLAY
 &STATUS`PRK_AIM_D`STATUS`REA_TARGET`DEFENSE`HEAT_COST [u(Cobj,age)]=-5
-&STATUS`PRK_AIM_D`ATTACK`CRITICAL_ATTACK`CHANCE [u(Cobj,age)]=0.05
+&STATUS`PRK_AIM_D`ATTACK`CRITICAL_ATTACK`CHANCE [u(Cobj,age)]=5
 
 &STATUS`PRK_AIM_C [u(cobj,age)]=Leading
 &STATUS`PRK_AIM_C`TAGS [u(cobj,age)]=PERK DISPLAY
-&STATUS`PRK_AIM_C`ATTACK`BONUS`SCATTER [u(Cobj,age)]=0.33
+&STATUS`PRK_AIM_C`DAMAGE_SCATTER`POSITIVE_INCREASE [u(Cobj,age)]=1.33
+&STATUS`PRK_AIM_C`DAMAGE_SCATTER`NEGATIVE_DECREASE [u(Cobj,age)]=0.66
 
 &STATUS`PRK_AIM_B [u(cobj,age)]=Lock-On
 &STATUS`PRK_AIM_B`TAGS [u(cobj,age)]=PERK DISPLAY
-&STATUS`PRK_AIM_B`ATTACK`CRITICAL_ATTACK`CHANCE [u(Cobj,age)]=0.05
+&STATUS`PRK_AIM_B`ATTACK`CRITICAL_ATTACK`CHANCE [u(Cobj,age)]=5
 &STATUS`PRK_AIM_B`ATTACK_ON_SOLID_RANGED [u(cobj,age)]=th u(addto,%q<atker>,D`COMBAT`ACTIVE`STATUS`PRK_AIM_B`CHARGES,1)
 &STATUS`PRK_AIM_B`ATTACK_ON_DIRECT_RANGED [u(cobj,age)]=th u(addto,%q<atker>,D`COMBAT`ACTIVE`STATUS`PRK_AIM_B`CHARGES,2)
-&STATUS`PRK_AIM_B`ATTACK_INCREASE_HITMUL [u(cobj,age)]=@select/inline cand(lte(%q<hitmul>,0.7),lte(u(setr,lockonrand,rand(1,100)),u(setr,lockonchance,mul(5,get(%0/%q<atk>`ACTIVE`STATUS`PRK_AIM_B`CHARGES)))))=1,{th u(setq,hitmul,switch(%q<hitmul>,0.0,0.4,0.4,0.7,0.7,1.0));@attach %!/INC`EANNOUNCE=Lock-On,[ansi(hw,name(%q<atker>))] has %n in [poss(%q<atker>)] sights! There's no escape! Hit upgraded to a [switch(%q<hitmul>,0.4,Close Call,0.7,Solid Hit,1.0,Direct Hit)]!;@attach %!/INC`DEBUG=Lock-On,Attack Increase Hitmul Chance: %q<lockonrand>/%q<lockonchance>};th unsetq(lockon*)
+&STATUS`PRK_AIM_B`ATTACK_INCREASE_HITMUL [u(cobj,age)]=@select/inline cand(lte(%q<hitmul>,0.7),lte(u(setr,lockonrand,rand(1,100)),u(setr,lockonchance,mul(5,get(%0/%q<atk>`ACTIVE`STATUS`PRK_AIM_B`CHARGES)))),match(SPECIAL RANGED,%q<atkmode>))=1,{th u(setq,hitmul,switch(%q<hitmul>,0.0,0.4,0.4,0.7,0.7,1.0));@attach %!/INC`EANNOUNCE=Lock-On,[ansi(hw,name(%q<atker>))] has %n in [poss(%q<atker>)] sights! There's no escape! Hit upgraded to a [switch(%q<hitmul>,0.4,Close Call,0.7,Solid Hit,1.0,Direct Hit)]!;@attach %!/INC`DEBUG=Lock-On,Attack Increase Hitmul Chance: %q<lockonrand>/%q<lockonchance>};th unsetq(lockon*)
 
 &STATUS`PRK_AIM_A [u(cobj,age)]=Hypervelocity
 &STATUS`PRK_AIM_A`TAGS [u(cobj,age)]=PERK DISPLAY
@@ -1774,24 +1784,25 @@ Shooter
 &STATUS`PRK_AIM_S [u(cobj,age)]=One Shot, One Kill
 &STATUS`PRK_AIM_S`TAGS [u(cobj,age)]=PERK DISPLAY
 &STATUS`PRK_AIM_S`ATTACK_POST_HITMUL [u(cobj,age)]=th u(setq,blockdefdechitmul,1)
+&STATUS`PRK_AIM_S`DAMAGE_SCATTER`BLOCK_NEGATIVE [u(cobj,age)]=if(cand(gte(%q<atklevel>,5),match(SPECIAL RANGED,%q<atkmode>)),1,0)
 @@ Unfinished...
 
 @@ Agility Perks
 &STATUS`PRK_AGILITY_D [u(cobj,age)]=Agility D
 &STATUS`PRK_AGILITY_D`TAGS [u(cobj,age)]=PERK DISPLAY
 &STATUS`PRK_AGILITY_D`STATUS`REA_MANEUVER`DEFENSE`HEAT_COST [u(Cobj,age)]=-5
-&STATUS`PRK_AGILITY_D`DEFENSE`CRITICAL_DEFENSE`CHANCE [u(Cobj,age)]=0.1
+&STATUS`PRK_AGILITY_D`DEFENSE`CRITICAL_DEFENSE`CHANCE [u(Cobj,age)]=10
 
 &STATUS`PRK_AGILITY_C [u(cobj,age)]=Agility C
 &STATUS`PRK_AGILITY_C`TAGS [u(cobj,age)]=PERK DISPLAY
-&STATUS`PRK_AGILITY_C`DEFENSE`CRITICAL_DEFENSE`CHANCE [u(Cobj,age)]=0.1
+&STATUS`PRK_AGILITY_C`DEFENSE`CRITICAL_DEFENSE`CHANCE [u(Cobj,age)]=10
 &STATUS`PRK_AGILITY_C`DEFENSE_ON_MISS [u(cobj,age)]=@attach %!/INC`HEAT=%0,-10,Agility C
 &STATUS`PRK_AGILITY_C`DEFENSE_ON_CRITICAL_DEFENSE [u(cobj,age)]=@attach %!/INC`HEAT=%0,-10,Agility C
 
 &STATUS`PRK_AGILITY_B [u(cobj,age)]=Agility B
 &STATUS`PRK_AGILITY_B`TAGS [u(cobj,age)]=PERK DISPLAY
-&STATUS`PRK_AGILITY_B`DEFENSE`CRITICAL_DEFENSE`CHANCE [u(Cobj,age)]=0.05
-&STATUS`PRK_AGILITY_B`DEFENSE`BONUS`STAT`5 [u(cobj,age)]=if(cand(strmatch(%q<atkmode>,MELEE),lte(%q<atklevel>,4)),Solid)
+&STATUS`PRK_AGILITY_B`DEFENSE`CRITICAL_DEFENSE`CHANCE [u(Cobj,age)]=5
+&STATUS`PRK_AGILITY_B`DEFENSE`BONUS`STAT`5 [u(cobj,age)]=if(cand(match(MELEE SPECIAL,%q<atkmode>),lte(%q<atklevel>,4)),Solid)
 
 
 &STATUS`PRK_AGILITY_A [u(cobj,age)]=Agility A
@@ -1812,21 +1823,22 @@ Shooter
 &STATUS`PRK_RESILIENCE_C [u(cobj,age)]=Resilience C
 &STATUS`PRK_RESILIENCE_C`TAGS [u(cobj,age)]=PERK DISPLAY
 &STATUS`PRK_RESILIENCE_C`DEFENSE`CRITICAL_DEFENSE`DAMAGE [u(Cobj,age)]=0.1
-@@ Unfinished
+&STATUS`PRK_RESILIENCE_C`DEFENSE_AFTER_CRITICAL_DEFENSE [u(Cobj,age)]=@select/inline u(setr,crtdmgnegated,round(sub(%q<damagecritatk>,%q<damagecritdef>),0))=>199,{@attach %!/INC`AUX=%#,div(%q<crtdmgnegated>,200),Resilience C}
 
 &STATUS`PRK_RESILIENCE_B [u(cobj,age)]=Resilience B
 &STATUS`PRK_RESILIENCE_B`TAGS [u(cobj,age)]=PERK DISPLAY
-&STATUS`PRK_RESILIENCE_B`STATUS`REA_GUARD`DEFENSE_COST [u(Cobj,age)]=-5
-&STATUS`PRK_RESILIENCE_B`DEFENSE`CRITICAL_DEFENSE`DAMAGE [u(Cobj,age)]=0.1
-&STATUS`PRK_RESILIENCE_B`DEFENSE`PENALTY`POWER [u(cobj,age)]=if(cand(strmatch(%q<atkmode>,MELEE),lte(%q<atklevel>,4)),0.35)
+&STATUS`PRK_RESILIENCE_B`DEFENSE`CRITICAL_DEFENSE`DAMAGE [u(Cobj,age)]=0.05
+&STATUS`PRK_RESILIENCE_B`DEFENSE`PENALTY`POWER [u(cobj,age)]=if(cand(match(MELEE SPECIAL,%q<atkmode>),lte(%q<atklevel>,4)),0.75)
+
+&APPEND [u(Cobj,age)]=u(setr,%0,linsert(r(%0),-,1,%2))
 
 &STATUS`PRK_RESILIENCE_A [u(cobj,age)]=Resilience A
 &STATUS`PRK_RESILIENCE_A`TAGS [u(cobj,age)]=PERK DISPLAY
-&STATUS`PRK_RESILIENCE_A`DEFENSE_DECREASE_DAMAGE_2 [u(cobj,age)]=th u(setq,defdecdamagemul,linsert(%q<defdecdamagemul>,-1,u(setr,resila,u(scatter,30))));@attach %!/INC`DEBUG=Resilience A,Defense Decrease Damage Multiplier: %q<resila>;th unsetq(resila)
+&STATUS`PRK_RESILIENCE_A`DEFENSE_DECREASE_DAMAGE_2_FINAL [u(cobj,age)]=th u(append,defdec2damagefin,u(setr,resila,u(scatter,30)));@attach %!/INC`DEBUG=Resilience A,Defense Decrease Damage Multiplier: %q<resila>;th unsetq(resila)
 
 &STATUS`PRK_RESILIENCE_S [u(cobj,age)]=Resilience S
 &STATUS`PRK_RESILIENCE_S`TAGS [u(cobj,age)]=PERK DISPLAY
-&STATUS`PRK_RESILIENCE_S`DEFENSE_DECREASE_DAMAGE [u(Cobj,age)]=@select/inline %q<atkmode>=MELEE,{@attach %!/INC`EANNOUNCE=Resilience S,[ansi(hw,name(%q<atker>))]'s attack barely scratches [ansi(hw,%n)] at all!;th u(setq,damage,sub(%q<damage>,mul(before(%q<atkpower>,.),25)))}
+&STATUS`PRK_RESILIENCE_S`DEFENSE_DECREASE_DAMAGE_FINAL [u(Cobj,age)]=@select/inline %q<atkmode>=MELEE,{@attach %!/INC`EANNOUNCE=Resilience S,[ansi(hw,name(%q<atker>))]'s attack barely scratches [ansi(hw,%n)] at all!;th u(append,defdecdamagefin,mul(floor(%q<atkpower>),25))}
 
 @@ Mobility Perks
 &STATUS`PRK_MOBILITY_D [u(cobj,age)]=Mobility D
@@ -1842,17 +1854,20 @@ Shooter
 
 &STATUS`PRK_MOBILITY_B [u(cobj,age)]=Mobility B
 &STATUS`PRK_MOBILITY_B`TAGS [u(cobj,age)]=PERK DISPLAY
-&STATUS`PRK_MOBILITY_B`ATTACK`BONUS`STAT`7 [u(Cobj,age)]=if(cand(strmatch(%q<atkmode>,RANGED),gte(%q<atklevel>,4)),Solid,0)
-&STATUS`PRK_MOBILITY_B`DEFENSE`CRITICAL_DEFENSE`CHANCE [u(Cobj,age)]=0.05
+&STATUS`PRK_MOBILITY_B`ATTACK`BONUS`STAT`7 [u(Cobj,age)]=if(cand(match(RANGED SPECIAL,%q<atkmode>),gte(%q<atklevel>,4)),Solid,0)
+&STATUS`PRK_MOBILITY_B`DEFENSE`CRITICAL_DEFENSE`CHANCE [u(Cobj,age)]=5
 
 &STATUS`PRK_MOBILITY_A [u(cobj,age)]=Mobility A
 &STATUS`PRK_MOBILITY_A`TAGS [u(cobj,age)]=PERK DISPLAY
+&STATUS`PRK_MOBILITY_A`DEFENSE_ON_MISS_RANGED [u(cobj,age)]=@attach %!/INC`AUX=%#,1,Mobility A
+&STATUS`PRK_MOBILITY_A`DEFENSE_ON_CLOSE_RANGED [u(Cobj,age)]=@attach %!/STATUS`PRK_MOBILITY_A`DEFENSE_ON_MISS_RANGED
+&STATUS`PRK_MOBILITY_A`DEFENSE`CRITICAL_DEFENSE`CHANCE [u(Cobj,age)]=5
 
-
-&STATUS`PRK_MOBILITY_S [u(cobj,age)]=Mobility B
+&STATUS`PRK_MOBILITY_S [u(cobj,age)]=Mobility S
 &STATUS`PRK_MOBILITY_S`TAGS [u(cobj,age)]=PERK DISPLAY
-&STATUS`PRK_MOBILITY_S`ATTACK`BONUS`STAT`7 [u(Cobj,age)]=if(cand(strmatch(%q<atkmode>,RANGED),gte(%q<atklevel>,4)),Solid,0)
-&STATUS`PRK_MOBILITY_S`DEFENSE`CRITICAL_DEFENSE`CHANCE [u(Cobj,age)]=0.05
+&STATUS`PRK_MOBILITY_S`DEFENSE_ON_MISS_RANGED [u(cobj,age)]=@attach %!/INC`VENT=%#,-5,Mobility S
+&STATUS`PRK_MOBILITY_A`DEFENSE_ON_CLOSE_RANGED [u(Cobj,age)]=@attach %!/STATUS`PRK_MOBILITY_S`DEFENSE_ON_MISS_RANGED
+
 
 @@ Armor Perks
 &STATUS`PRK_ARMOR_D [u(cobj,age)]=Armor D
@@ -1862,22 +1877,23 @@ Shooter
 
 &STATUS`PRK_ARMOR_C [u(cobj,age)]=Armor C
 &STATUS`PRK_ARMOR_C`TAGS [u(cobj,age)]=PERK DISPLAY
+&STATUS`PRK_ARMOR_C`ATTACK`BONUS`STAT`4 [u(Cobj,age)]=Minor
+&STATUS`PRK_ARMOR_C`ATTACK`BONUS`STAT`6 [u(Cobj,age)]=Minor
 &STATUS`PRK_ARMOR_C`STATUS`REA_GUARD`DEFENSE_COST [u(Cobj,age)]=-5
 &STATUS`PRK_ARMOR_C`STATIC`MAXIMUM`HP [u(Cobj,age)]=200
 
 &STATUS`PRK_ARMOR_B [u(cobj,age)]=Armor B
 &STATUS`PRK_ARMOR_B`TAGS [u(cobj,age)]=PERK DISPLAY
-&STATUS`PRK_ARMOR_B`DEFENSE_ON_STRIKE_RANGED [u(cobj,age)]=@select/inline gte(%q<atklevel>,4)=1,{th u(setq,atkpower,sub(%q<atkpower>,1.0))}
-&STATUS`PRK_ARMOR_B`DEFENSE`CRITICAL_DEFENSE`DAMAGE [u(Cobj,age)]=0.05
+&STATUS`PRK_ARMOR_B`DEFENSE`PENALTY`POWER [u(cobj,age)]=if(cand(match(SPECIAL RANGED,%q<atkmode>),gte(%q<atklevel>,4)),1.0)
 
 &STATUS`PRK_ARMOR_A [u(cobj,age)]=Armor A
 &STATUS`PRK_ARMOR_A`TAGS [u(cobj,age)]=PERK DISPLAY
-&STATUS`PRK_ARMOR_A`DEFENSE_ON_STRIKE_RANGED [u(cobj,age)]=@select/inline 1={th u(setq,blockatkinflict,1)}
+&STATUS`PRK_ARMOR_A`DEFENSE_POST_DAMAGE [u(cobj,age)]=@select/inline cand(match(SPECIAL RANGED,%q<atkmode>),lte(fdiv(get(%#/D`COMBAT`HEALTH),%q<damagespc>),0.25))={th u(setq,blockatkinflict,1)}
 &STATUS`PRK_ARMOR_A`DEFENSE`CRITICAL_DEFENSE`DAMAGE [u(Cobj,age)]=0.05
 
 &STATUS`PRK_ARMOR_S [u(cobj,age)]=Armor S
 &STATUS`PRK_ARMOR_S`TAGS [u(cobj,age)]=PERK DISPLAY
-&STATUS`PRK_ARMOR_S`DEFENSE_DECREASE_HITMUL [u(cobj,age)]=@select/inline gte(%q<hitmul>,0.7)=1,{@select/inline lte(u(setq,armorsrand,die(1,100)),20)=1,{th u(setq,hitmul,switch(%q<hitmul>,1.0,0.7,0.7,0.4));@attach %!/INC`EANNOUNCE=Armor S,[ansi(h,%n)] is tough as nails! Strike downgraded to a [switch(%q<hitmul>,0.7,Solid,Close)]!}}
+&STATUS`PRK_ARMOR_S`DEFENSE_DECREASE_HITMUL [u(cobj,age)]=@select/inline cand(gte(%q<hitmul>,0.7),match(SPECIAL RANGED,%q<atkmode>))=1,{@select/inline lte(u(setq,armorsrand,die(1,100)),20)=1,{th u(setq,hitmul,switch(%q<hitmul>,1.0,0.7,0.7,0.4));@attach %!/INC`EANNOUNCE=Armor S,[ansi(h,%n)] is tough as nails! Strike downgraded to a [switch(%q<hitmul>,0.7,Solid,Close)]!}}
 
 
 @@ STATUS - Pushes
@@ -2023,7 +2039,9 @@ Shooter
 
 &INC`COMBAT`READYCHARACTER [u(cobj,age)]=@attach %!/WIPE=%0,D`COMBAT;@attach %!/WIPE=%0,D`COMBACK;@dolist/inline MODE OPPONENTS={th u(attrib_set,%0,D`COMBAT`%i0,get(%0/D`CSYS`%i0));@attach %!/WIPE=%0,D`CSYS`%i0};th u(attrib_set,%0,D`COMBAT`OPPONENTS,1);@attach %!/INC`LOADSQL=CLINK,%1,,c1;th u(attrib_set,%0,D`COMBAT`PILOT`LINK,%1);th u(attrib_set,%0,D`COMBAT`PILOT`LOCKED,%q<cl.linklocked>);@attach %!/INC`LOADSQL=CLINK,%2,,c2;th u(attrib_set,%0,D`COMBAT`MECHA`LINK,%1);th u(attrib_set,%0,D`COMBAT`MECHA`LOCKED,%q<c2.linklocked>);th u(attrib_set,%0,D`COMBAT`PILOT`NAME,%q<c1.centityname>);th u(attrib_set,%0,D`COMBAT`MECHA`NAME,%q<c2.centityname>);@attach %!/INC`COMBAT`READYCHARACTER`BEGIN;@attach %!/INC`COMBAT`READYCHARACTER`FINISH
 
-&INC`COMBAT`READYCHARACTER`BEGIN [u(cobj,age)]=@dolist/inline/nobreak PILOT~0~%q<c1.centity> MECHA~1~%q<c2.centity>={@dolist/inline/nobreak/delimit [chr(176)] [u(mysql3,READYCHARACTER`TRAITS,elements(%i0,3,~))]={@check hasattr(u(cobj,agedb)/[u(setr,entype,ENTITY`[elements(%i1,2,~)]`TRAIT`[elements(%i0,1,chr(177))])]);@check strlen(u(setr,prefix,get(u(cobj,agedb)/%q<entype>`PREFIX)));@check strlen(u(setr,found,get(u(cobj,agedb)/%q<prefix>`[elements(%i0,2,chr(177))]`STATUS)));@dolist/inline lnum(elements(%i0,3,chr(177)))={@attach %!/INC`SETSTATUS=%0,%0,%q<found>,,X,X};th u(attrib_set,%0,D`COMBAT`[elements(%i1,1,~)]`TRAITS`[elements(%i0,1,chr(177))],sortkey(#lambda/get(u(cobj,agedb)/%q<prefix>`\%0),setunion(get(%0/D`COMBAT`[elements(%i1,1,~)]`TRAITS`[elements(%i0,1,chr(177))]),elements(%i0,2,chr(177))),i))}};@dolist/inline/nobreak PILOT~0~%q<c1.centity> MECHA~1~%q<c2.centity>={@dolist/inline/nobreak/delimit [chr(176)] [u(mysql3,READYCHARACTER`STATS,elements(%i0,3,~))]={th u(attrib_set,%0,D`COMBAT`[elements(%i1,1,~)]`STATS`[elements(%i0,1,chr(177))],u(setr,statnum,add(elements(%i0,2,chr(177)),)));th u(attrib_set,%0,D`COMBAT`[elements(%i1,1,~)]`STATS`[elements(%i0,1,chr(177))]`GRADE,u(statletter,%q<statnum>))}};@dolist/inline lnum(0,7)={th u(attrib_set,%0,D`COMBAT`STATS`%i0`GRADENUM,u(setr,finalstat,add(1,get(%0/D`COMBAT`PILOT`STATS`%i0),get(%0/D`COMBAT`MECHA`STATS`%i0),u(ladd,iter(get(%0/D`COMBAT`ACTIVE`STATUS),get(u(cobj,age)/STATUS`[before(%i0,$)]`STATIC`STAT_GRADE`%i1))))));th u(attrib_set,%0,D`COMBAT`STATS`%i0`GRADE,u(statletter,%q<finalstat>));th u(attrib_set,%0,D`COMBAT`STATS`%i0,switch(%q<finalstat>,1,30,2,40,3,50,4,60,5,70,6,80,7,95,8,110,9,125));@dolist/inline lnum(1,9)={@select/inline gte(%q<finalstat>,%i0)=1,{@select/inline hasattr(%!/STATUS`PRK_[u(statbyid,%i1)]_[u(statletter,%i0)])=1,{@attach %!/INC`SETSTATUS=%0,%0,PRK_[u(statbyid,%i1)]_[u(statletter,%i0)],,X,X}}}}
+&INC`COMBAT`READYCHARACTER`BEGIN [u(cobj,age)]=@dolist/inline/nobreak PILOT~0~%q<c1.centity> MECHA~1~%q<c2.centity>={@dolist/inline/nobreak/delimit [chr(176)] [u(mysql3,READYCHARACTER`TRAITS,elements(%i0,3,~))]={@check hasattr(u(cobj,agedb)/[u(setr,entype,ENTITY`[elements(%i1,2,~)]`TRAIT`[elements(%i0,1,chr(177))])]);@check strlen(u(setr,prefix,get(u(cobj,agedb)/%q<entype>`PREFIX)));@check strlen(u(setr,found,get(u(cobj,agedb)/%q<prefix>`[elements(%i0,2,chr(177))]`STATUS)));@dolist/inline lnum(elements(%i0,3,chr(177)))={@attach %!/INC`SETSTATUS=%0,%0,%q<found>,,X,X};th u(attrib_set,%0,D`COMBAT`[elements(%i1,1,~)]`TRAITS`[elements(%i0,1,chr(177))],sortkey(#lambda/get(u(cobj,agedb)/%q<prefix>`\%0),setunion(get(%0/D`COMBAT`[elements(%i1,1,~)]`TRAITS`[elements(%i0,1,chr(177))]),elements(%i0,2,chr(177))),i))}};@dolist/inline/nobreak PILOT~0~%q<c1.centity> MECHA~1~%q<c2.centity>={@dolist/inline/nobreak/delimit [chr(176)] [u(mysql3,READYCHARACTER`STATS,elements(%i0,3,~))]={th u(attrib_set,%0,D`COMBAT`[elements(%i1,1,~)]`STATS`[elements(%i0,1,chr(177))],u(setr,statnum,add(elements(%i0,2,chr(177)),)));th u(attrib_set,%0,D`COMBAT`[elements(%i1,1,~)]`STATS`[elements(%i0,1,chr(177))]`GRADE,u(statletter,%q<statnum>))}};@dolist/inline lnum(0,7)={th u(attrib_set,%0,D`COMBAT`STATS`%i0`GRADENUM,u(setr,finalstat,add(1,get(%0/D`COMBAT`PILOT`STATS`%i0),get(%0/D`COMBAT`MECHA`STATS`%i0),u(ladd,iter(get(%0/D`COMBAT`ACTIVE`STATUS),get(u(cobj,age)/STATUS`[before(%i0,$)]`STATIC`STAT_GRADE`%i1))))));th u(attrib_set,%0,D`COMBAT`STATS`%i0`GRADE,u(statletter,%q<finalstat>));th u(attrib_set,%0,D`COMBAT`STATS`%i0,u(statmap,%q<finalstat>));@dolist/inline lnum(1,9)={@select/inline gte(%q<finalstat>,%i0)=1,{@select/inline hasattr(%!/STATUS`PRK_[u(statbyid,%i1)]_[u(statletter,%i0)])=1,{@attach %!/INC`SETSTATUS=%0,%0,PRK_[u(statbyid,%i1)]_[u(statletter,%i0)],,X,X}}}}
+
+&STATMAP [u(cobj,age)]=switch(%0,1,30,2,40,3,50,4,60,5,70,6,80,7,95,8,110,9,125)
 
 &STATBYID [u(cobj,age)]=switch(%0,0,STRENGTH,1,SKILL,2,FIREPOWER,3,AIM,4,RESILIENCE,5,AGILITY,6,ARMOR,7,MOBILITY)
 
@@ -2170,9 +2188,9 @@ Shooter
 @@ - DEFEND
 &INC`COMBAT`REACT`MAIN [u(cobj,age)]=@attach %!/INC`COMBAT`DEFEND`MAIN`TARGET;@attach %!/INC`COMBAT`DEFEND`MAIN`CALCULATE;@attach %!/INC`COMBAT`DEFEND`MAIN`STRIKE;@attach %!/INC`COMBAT`DEFEND`MAIN`ENDTURN;@attach %!/INC`COMBAT`DEFEND`MAIN`DEBUG;@pemit %#=FIL: %?
 
-&REG`DEFEND [u(cobj,age)]=(?P<reaname>\w+?)?(?:\/(?P<level>\d+?)(?P<usex>x?)?(?:\:(?P<defname>.*))?)
+&REG`DEFEND [u(cobj,age)]=(?P<reaname>\w+?)?(?:\/(?P<level>\d+?)(?P<usex>x?)?(?:\:(?P<defname>.*))?)?
 
-&INC`COMBAT`DEFEND`MAIN`TARGET [u(cobj,age)]=@check nattr(%#/D`COMBAT`**)=@attach %!/INC`MSG=ERROR: You are not combat ready. Make sure your Pilot and Mecha are set and use +reset.;@stop gte(get(%#/D`COMBAT`DAMAGE),get(%#/D`COMBAT`HEALTH))=@attach %!/INC`MSG=ERROR: The defeated can do no such thing!;@check nattr(%#/D`COMBAT`Q`*)=@attach %!/INC`MSG=ERROR: You have no attacks to deal with!;@check strlen(%0)=@attach %!/INC`MSG=ERROR: Nobody entered to defend against.;@check isdbref(u(setr,atker,namegrab(iter(lattr(%#/D`COMBAT`Q`*),last(%i0,`)),%0)))=@attach %!/INC`MSG=ERROR: No Attacker called '%0'!;th u(setq,atk,D`COMBAT`Q`%q<atker>);th regmatchi(%2,v(REG`DEFEND),reaname:reaname level:rlevel usex:usex defname:defname);@check strlen(%q<reaname>)=@attach %!/INC`MSG=ERROR: No Reaction method entered.;@check u(setr,def,u(FIND_TRAIT,REA,%q<reaname>))=@attach %!/INC`MSG=ERROR: No Reaction named '%q<reaname>'!;@stop t(match(get(%#/D`COMBAT`BANNED`DEF),%q<def>))=@attach %!/INC`MSG=ERROR: You may not use that Reaction!;@check match(1 2 3,u(setr,rlevel,u(strfirstof,%q<rlevel>,1)))=@attach %!/INC`MSG=ERROR: Reaction levels must be between 1 and 3.;@select/inline gte(get(%#/D`COMBAT`TENSION),u(setr,deftencost,if(%q<usex>,u(cust,REA,%q<def>`COST`%q<rlevel>`X),0)))=0,{@stop 1=@attach %!/INC`MSG=ERROR: You don't have the Tension to X-ify your Defense!};@@ th u(setq,defname,u(strfirstof,%q<defname>,Reaction));th u(setq,sty,get(%#/%q<atk>`OFF));th u(setq,atkmode,get(%#/%q<atk>`atkmode));@attach %!/INC`SETSTATUS=%#,%#,u(setr,defstatus,get(u(cobj,agedb)/REA`%q<def>`STATUS)),LEVEL=%q<rlevel>|X=[t(%q<usex>)],get(u(cobj,agedb)/REA`%q<def>`ATTACK_TURNS),get(u(cobj,agedb)/REA`%q<def>`DEFENSE_TURNS);@dolist/inline get(%#/D`COMBAT`HOOKS`DEF`%q<def>`ACTIVATE)={@attach %!/STATUS`[before(%i0,$)]`DEF`%q<def>`ACTIVATE=%#,%i0}
+&INC`COMBAT`DEFEND`MAIN`TARGET [u(cobj,age)]=@check nattr(%#/D`COMBAT`**)=@attach %!/INC`MSG=ERROR: You are not combat ready. Make sure your Pilot and Mecha are set and use +reset.;@stop gte(get(%#/D`COMBAT`DAMAGE),get(%#/D`COMBAT`HEALTH))=@attach %!/INC`MSG=ERROR: The defeated can do no such thing!;@check nattr(%#/D`COMBAT`Q`*)=@attach %!/INC`MSG=ERROR: You have no attacks to deal with!;@check strlen(%0)=@attach %!/INC`MSG=ERROR: Nobody entered to defend against.;@check isdbref(u(setr,atker,namegrab(iter(lattr(%#/D`COMBAT`Q`*),last(%i0,`)),%0)))=@attach %!/INC`MSG=ERROR: No Attacker called '%0'!;th u(setq,atk,D`COMBAT`Q`%q<atker>);th regmatchi(%2,get(%!/REG`DEFEND),reaname:reaname level:rlevel usex:usex defname:defname);@check strlen(%q<reaname>)=@attach %!/INC`MSG=ERROR: No Reaction method entered.;@check u(setr,def,u(FIND_TRAIT,REA,%q<reaname>))=@attach %!/INC`MSG=ERROR: No Reaction named '%q<reaname>'!;@stop t(match(get(%#/D`COMBAT`BANNED`DEF),%q<def>))=@attach %!/INC`MSG=ERROR: You may not use that Reaction!;@check match(1 2 3,u(setr,rlevel,u(strfirstof,%q<rlevel>,1)))=@attach %!/INC`MSG=ERROR: Reaction levels must be between 1 and 3.;@select/inline gte(get(%#/D`COMBAT`TENSION),u(setr,deftencost,if(%q<usex>,u(cust,REA,%q<def>`COST`%q<rlevel>`X),0)))=0,{@stop 1=@attach %!/INC`MSG=ERROR: You don't have the Tension to X-ify your Defense!};@@ th u(setq,defname,u(strfirstof,%q<defname>,Reaction));th u(setq,sty,get(%#/%q<atk>`OFF));th u(setq,atkmode,get(%#/%q<atk>`atkmode));@attach %!/INC`SETSTATUS=%#,%#,u(setr,defstatus,get(u(cobj,agedb)/REA`%q<def>`STATUS)),LEVEL=%q<rlevel>|X=[t(%q<usex>)],get(u(cobj,agedb)/REA`%q<def>`ATTACK_TURNS),get(u(cobj,agedb)/REA`%q<def>`DEFENSE_TURNS);@dolist/inline get(%#/D`COMBAT`HOOKS`DEF`%q<def>`ACTIVATE)={@attach %!/STATUS`[before(%i0,$)]`DEF`%q<def>`ACTIVATE=%#,%i0}
 
 &DYNAMIC [u(cobj,age)]=add(u(ladd,iter(get(%0/D`COMBAT`ACTIVE_EFFECTS`%1),udefault(%!/EFFECT`[before(%i0,~)]`%2,0,%0),|,%b)),u(ladd,iter(get(%0/D`COMBAT`ACTIVE_BOOSTS`%1),udefault(%!/BOOST`[before(%i0,~)]`%2,0,%0),|,%b)),u(ladd,iter(get(%0/D`COMBAT`ABILITIES`%1),udefault(%!/ABIL`[before(%i0,~)]`%2,0,%0,after(%i0,~)),|,%b)))
 
@@ -2196,11 +2214,9 @@ Shooter
 
 &ATKERATKSTAT [u(cobj,age)]=if(%0,setinter(get(%#/%q<atk>`HOOKS`%0),%q<atkeratkstat>),%q<atkeratkstat>)
 
-&INC`COMBAT`DEFEND`MAIN`CALCULATE [u(cobj,age)]=th u(setq,atklevel,get(%#/%q<atk>`ATK));@dolist/inline u(setr,atkeratkstat,get(%#/%q<atk>`ACTIVE`STATUS`ATTACK))={@attach %!/STATUS`[before(%i0,$)]`ATTACK_ON_CALCULATE=%#,%i0};@attach %!/INC`COMBAT`DEFEND`MAIN`CALCULATE`ATKPOWER;@select/inline gt(add(%q<xconorig>,u(ladd,%q<xcon>)),0)=1,{@dolist/inline u(MEDEFSTAT,DEFENSE_ON_CALCULATE)={@attach %!/STATUS`[before(%i0,$)]`DEFENSE_ON_CALCULATE=%#,%i0};@dolist/inline BALANCE ATKMODE DAMAGEMOD ACCURACYMOD ON_HIT_CHECK ROLL THRESHOLD PRE_REROLL REROLL HITMUL_HOOKS CRITICAL DAMAGE={@attach %!/INC`COMBAT`DEFEND`MAIN`CALCULATE`%i0};@select/inline gte(%q<hitmul>,0)=1,{@attach %!/INC`COMBAT`DEFEND`MAIN`CALCULATE`ON_STRIKE};@dolist/inline DAMAGE_RAW ON_STRIKE_TYPE HEATNORMALIZE DAMAGE_NET NORMALIZE DAMAGE_PREFINAL DAMAGE_POST={@attach %!/INC`COMBAT`DEFEND`MAIN`CALCULATE`%i0};@dolist/inline u(MEDEFSTAT,DEFENSE_INFLICT_STATUS)={@attach %!/STATUS`[before(%i0,$)]`DEFENSE_INFLICT_STATUS=%#,%i0};th u(setq,dot,round(u(ladd,iter(get(%#/D`COMBAT`ACTIVE`STATUS`DEFENSE),u(getstatus,%#,%i0,DEFENSE,DOT))),0));@select/inline strlen(u(setr,offmode,get(%#/%q<atk>`MODE)))=>0,{@attach %!/INC`COMBAT`DEFEND`MAIN`CALCULATE`ATTACK_MODE`%q<offmode>};@select/inline strlen(u(setr,defmode,get(%#/D`COMBAT`MODE)))=>0,{@attach %!/INC`COMBAT`DEFEND`MAIN`CALCULATE`DEFENSE_MODE`%q<defmode>};@attach %!/INC`COMBAT`DEFEND`MAIN`CALCULATE`DAMAGE_SPECIAL;@select/inline cand(cor(gt(%q<hitmul>,0),%q<atkinflictoverride>),not(%q<atkinflictblock>))=1,{@dolist/inline u(ATKERATKSTAT,ATTACK_INFLICT_STATUS)={@attach %!/STATUS`[before(%i0,$)]`ATTACK_INFLICT_STATUS=%#,%i0}}}
+&INC`COMBAT`DEFEND`MAIN`CALCULATE [u(cobj,age)]=th u(setq,atklevel,get(%#/%q<atk>`ATK));@dolist/inline u(setr,atkeratkstat,get(%#/%q<atk>`ACTIVE`STATUS`ATTACK))={@attach %!/STATUS`[before(%i0,$)]`ATTACK_ON_CALCULATE=%#,%i0};@attach %!/INC`COMBAT`DEFEND`MAIN`CALCULATE`ATKPOWER;@select/inline gt(add(%q<xconorig>,u(ladd,%q<xcon>)),0)=1,{@dolist/inline u(MEDEFSTAT,DEFENSE_ON_CALCULATE)={@attach %!/STATUS`[before(%i0,$)]`DEFENSE_ON_CALCULATE=%#,%i0};@dolist/inline BALANCE ATKMODE DAMAGEMOD ACCURACYMOD ON_HIT_CHECK ROLL THRESHOLD PRE_REROLL REROLL HITMUL_HOOKS CRITICAL SCATTER DAMAGE={@attach %!/INC`COMBAT`DEFEND`MAIN`CALCULATE`%i0};@select/inline gte(%q<hitmul>,0)=1,{@attach %!/INC`COMBAT`DEFEND`MAIN`CALCULATE`ON_STRIKE};@dolist/inline DAMAGE_RAW ON_STRIKE_TYPE HEATNORMALIZE DAMAGE_NET NORMALIZE DAMAGE_PREFINAL DAMAGE_CRITICAL DAMAGE_FINAL={@attach %!/INC`COMBAT`DEFEND`MAIN`CALCULATE`%i0};@dolist/inline u(MEDEFSTAT,DEFENSE_INFLICT_STATUS)={@attach %!/STATUS`[before(%i0,$)]`DEFENSE_INFLICT_STATUS=%#,%i0};th u(setq,dot,round(u(ladd,iter(get(%#/D`COMBAT`ACTIVE`STATUS`DEFENSE),u(getstatus,%#,%i0,DEFENSE,DOT))),0));@select/inline strlen(u(setr,offmode,get(%#/%q<atk>`MODE)))=>0,{@attach %!/INC`COMBAT`DEFEND`MAIN`CALCULATE`ATTACK_MODE`%q<offmode>};@select/inline strlen(u(setr,defmode,get(%#/D`COMBAT`MODE)))=>0,{@attach %!/INC`COMBAT`DEFEND`MAIN`CALCULATE`DEFENSE_MODE`%q<defmode>};@dolist/inline DAMAGE_SPECIAL DAMAGE_POST={@attach %!/INC`COMBAT`DEFEND`MAIN`CALCULATE`%i0};@select/inline cand(cor(gt(%q<hitmul>,0),%q<atkinflictoverride>),not(%q<atkinflictblock>))=1,{@dolist/inline u(ATKERATKSTAT,ATTACK_INFLICT_STATUS)={@attach %!/STATUS`[before(%i0,$)]`ATTACK_INFLICT_STATUS=%#,%i0}}}
 
 &INC`COMBAT`DEFEND`MAIN`CALCULATE`ATKPOWER [u(cobj,age)]=th u(setq,xconorig,u(CUST,ATTACKS,%q<atklevel>));th u(setq,xcon,squish(iter(u(ATKERATKSTAT,ATTACK`BONUS`POWER),u(STATUS`[before(%i0,$)]`ATTACK`BONUS`POWER,%#,%i0)) [iter(u(ATKERATKSTAT,ATTACK`PENALTY`POWER),mul(u(STATUS`[before(%i0,$)]`ATTACK`PENALTY`POWER,%#,%i0),-1))] [iter(u(MEDEFSTAT,DEFENSE`BONUS`POWER),mul(u(STATUS`[before(%i0,$)]`DEFENSE`BONUS`POWER,%#,%i0),-1))] [iter(u(MEDEFSTAT,DEFENSE`PENALTY`POWER),u(STATUS`[before(%i0,$)]`DEFENSE`PENALTY`POWER,%#,%i0))]))
-
-@@ th u(setq,atkpower,add(%q<atklevel>,u(ladd,iter(u(ATKERATKSTAT,ATTACK`BONUS`POWER),u(STATUS`[before(%i0,$)]`ATTACK`BONUS`POWER,%#,%i0))),mul(u(ladd,iter(u(ATKERATKSTAT,ATTACK`PENALTY`POWER),u(STATUS`[before(%i0,$)]`ATTACK`PENALTY`POWER,%#,%i0))),-1),u(ladd,iter(u(MEDEFSTAT,DEFENSE`BONUS`POWER),u(STATUS`[before(%i0,$)]`DEFENSE`BONUS`POWER,%#,%i0))),mul(u(ladd,iter(u(MEDEFSTAT,DEFENSE`PENALTY`POWER),u(STATUS`[before(%i0,$)]`DEFENSE`PENALTY`POWER,%#,%i0))),-1)))
 
 &INC`COMBAT`DEFEND`MAIN`CALCULATE`ON_HIT_CHECK [u(Cobj,age)]=@dolist/inline u(ATKERATKSTAT,ATTACK_ON_HITCHECK)={@attach %!/STATUS`[before(%i0,$)]`ATTACK_ON_HITCHECK=%#,%i0};@dolist/inline u(MEDEFSTAT,DEFENSE_ON_HITCHECK)={@attach %!/STATUS`[before(%i0,$)]`DEFENSE_ON_HITCHECK=%#,%i0};
 
@@ -2208,48 +2224,34 @@ Shooter
 
 &INC`COMBAT`DEFEND`MAIN`CALCULATE`REROLL [u(cobj,age)]=@select/inline not(%q<disablereroll>)=1,{@dolist/inline u(ATKERATKSTAT,ATTACK_REROLL)={@attach %!/STATUS`[before(%i0,$)]`ATTACK_REROLL=%#,%i0}};
 
-&INC`COMBAT`DEFEND`MAIN`CALCULATE`CRITICAL [u(cobj,age)]=@dolist/inline critatkchance~CRITICAL_ATTACK`CHANCE critatkpower~CRITICAL_ATTACK`POWER critdefchance~CRITICAL_DEFENSE`CHANCE critdefpower~CRITICAL_DEFENSE`POWER={th u(setq,before(%i0,~),add(r(before(%i0,~)),u(ladd,iter(u(ATKERATKSTAT,ATTACK`[after(%i0,~)]),u(STATUS`[before(%i0,$)]`ATTACK`[after(%i1,~)],%#,%i0))),u(ladd,iter(u(MEDEFSTAT,DEFENSE`[after(%i0,~)]),u(STATUS`[before(%i0,$)]`DEFENSE`[after(%i1,~)],%#,%i0)))))}
+&INC`COMBAT`DEFEND`MAIN`CALCULATE`CRITICAL [u(cobj,age)]=@dolist/inline critatkchance~CRITICAL_ATTACK`CHANCE critatkpower~CRITICAL_ATTACK`POWER critdefchance~CRITICAL_DEFENSE`CHANCE critdefpower~CRITICAL_DEFENSE`POWER={th u(setq,before(%i0,~),add(r(before(%i0,~)),u(ladd,iter(u(ATKERATKSTAT,ATTACK`[after(%i0,~)]),u(STATUS`[before(%i0,$)]`ATTACK`[after(%i1,~)],%#,%i0))),u(ladd,iter(u(MEDEFSTAT,DEFENSE`[after(%i0,~)]),u(STATUS`[before(%i0,$)]`DEFENSE`[after(%i1,~)],%#,%i0)))))};th u(setq,critatk,lte(u(setr,critatkrand,rand(1,100)),%q<critatkchance>));@attach %!/INC`DEBUG=CRITICAL ATTACK, Critical Atttack Chance Roll: [u(setr,critatkdeb,%q<critatkrand>/%q<critatkchance>)];th u(setq,critdef,lte(u(setr,critdefrand,rand(1,100)),%q<critdefchance>));@attach %!/INC`DEBUG=CRITICAL DEFENSE, Critical Defense Chance Roll: [u(setr,critdefdeb,%q<critdefrand>/%q<critdefchance>)];
 
 &INC`COMBAT`DEFEND`MAIN`CALCULATE`HITMUL_HOOKS [u(cobj,age)]=th u(setq,orighitmul,%q<hitmul>);@dolist/inline INCREASE DECREASE MODIFY FINAL={@dolist/inline u(ATKERATKSTAT,ATTACK_%i0_HITMUL)={@attach %!/STATUS`[before(%i0,$)]`ATTACK_%i1_HITMUL=%#,%i0}};@dolist/inline u(MEDEFSTAT,DEFENSE_REROLL)={@attach %!/STATUS`[before(%i0,$)]`DEFENSE_REROLL=%#,%i0};@dolist/inline INCREASE DECREASE MODIFY FINAL={@dolist/inline u(MEDEFSTAT,DEFENSE_%i0_HITMUL)={@attach %!/STATUS`[before(%i0,$)]`DEFENSE_%i1_HITMUL=%#,%i0}};
 
-&INC`COMBAT`DEFEND`MAIN`CALCULATE`ON_STRIKE [u(cobj,age)]=@dolist/inline u(ATKERATKSTAT,ATTACK_ON_STRIKE)={@attach %!/STATUS`[before(%i0,$)]`ATTACK_ON_STRIKE=%#,%i0;@attach %!/STATUS`[before(%i0,$)]`ATTACK_ON_STRIKE_%q<atkmode>=%#,%i0};@dolist/inline u(MEDEFSTAT,DEFENSE_ON_STRIKE)={@attach %!/STATUS`[before(%i0,$)]`DEFENSE_ON_STRIKE=%#,%i0};@dolist/inline u(MEDEFSTAT,DEFENSE_ON_STRIKE_%q<atkmode>)={@attach %!/STATUS`[before(%i0,$)]`DEFENSE_ON_STRIKE_%q<atkmode>=%#,%i0};
+&INC`COMBAT`DEFEND`MAIN`CALCULATE`ON_STRIKE [u(cobj,age)]=@dolist/inline u(ATKERATKSTAT,ATTACK_ON_STRIKE)={@attach %!/STATUS`[before(%i0,$)]`ATTACK_ON_STRIKE=%#,%i0;@attach %!/STATUS`[before(%i0,$)]`ATTACK_ON_STRIKE_%q<atkmode>=%#,%i0};@dolist/inline u(ATKERATKSTAT,ATTACK_ON_STRIKE_%q<atkmode>)={@attach %!/STATUS`[before(%i0,$)]`ATTACK_ON_STRIKE_%q<atkmode>=%#,%i0};@select/inline t(%q<critatk>)=1,{@dolist/inline u(ATKERATKSTAT,ATTACK_ON_CRITICAL_ATTACK)={@attach %!/STATUS`[before(%i0,$)]`ATTACK_ON_CRITICAL_ATTACK=%#,%i0;@attach %!/STATUS`[before(%i0,$)]`ATTACK_ON_STRIKE_%q<atkmode>=%#,%i0};@dolist/inline u(ATKERATKSTAT,ATTACK_ON_CRITICAL_ATTACK_%q<atkmode>)={@attach %!/STATUS`[before(%i0,$)]`ATTACK_ON_CRITICAL_ATTACK_%q<atkmode>=%#,%i0};@dolist/inline u(MEDEFSTAT,DEFENSE_ON_CRITICAL_ATTACK)={@attach %!/STATUS`[before(%i0,$)]`DEFENSE_ON_CRITICAL_ATTACK=%#,%i0};@dolist/inline u(MEDEFSTAT,DEFENSE_ON_CRITICAL_ATTACK_%q<atkmode>)={@attach %!/STATUS`[before(%i0,$)]`DEFENSE_ON_CRITICAL_ATTACK_%q<atkmode>=%#,%i0}};@dolist/inline u(MEDEFSTAT,DEFENSE_ON_STRIKE)={@attach %!/STATUS`[before(%i0,$)]`DEFENSE_ON_STRIKE=%#,%i0};@dolist/inline u(MEDEFSTAT,DEFENSE_ON_STRIKE_%q<atkmode>)={@attach %!/STATUS`[before(%i0,$)]`DEFENSE_ON_STRIKE_%q<atkmode>=%#,%i0};@select/inline t(%q<critdef>)=1,{@dolist/inline u(MEDEFSTAT,DEFENSE_ON_CRITICAL_DEFENSE)={@attach %!/STATUS`[before(%i0,$)]`DEFENSE_ON_CRITICAL_DEFENSE=%#,%i0};@dolist/inline u(MEDEFSTAT,DEFENSE_ON_CRITICAL_DEFENSE_%q<atkmode>)={@attach %!/STATUS`[before(%i0,$)]`DEFENSE_ON_CRITICAL_DEFENSE_%q<atkmode>=%#,%i0};@dolist/inline u(ATKERATKSTAT,ATTACK_ON_CRITICAL_DEFENSE)={@attach %!/STATUS`[before(%i0,$)]`ATTACK_ON_CRITICAL_DEFENSE=%#,%i0;@attach %!/STATUS`[before(%i0,$)]`ATTACK_ON_STRIKE_%q<atkmode>=%#,%i0};@dolist/inline u(ATKERATKSTAT,ATTACK_ON_CRITICAL_DEFENSE_%q<atkmode>)={@attach %!/STATUS`[before(%i0,$)]`ATTACK_ON_CRITICAL_DEFENSE_%q<atkmode>=%#,%i0};}
 
 &INC`COMBAT`DEFEND`MAIN`CALCULATE`ON_STRIKE_TYPE [u(cobj,age)]=th u(setq,htype,if(gt(%q<hitmul>,0.0),if(gte(%q<hitmul>,1.0),DIRECT,if(gte(%q<hitmul>,0.7),SOLID,CLOSE)),MISS));@dolist/inline u(ATKERATKSTAT,ATTACK_ON_%q<htype>)={@attach %!/STATUS`[before(%i0,$)]`ATTACK_ON_%q<htype>=%#,%i0};@dolist/inline u(ATKERATKSTAT,ATTACK_ON_%q<htype>_%q<atkmode>)={@attach %!/STATUS`[before(%i0,$)]`ATTACK_ON_%q<htype>_%q<atkmode>=%#,%i0};@dolist/inline u(MEDEFSTAT,DEFENSE_ON_%q<htype>)={@attach %!/STATUS`[before(%i0,$)]`DEFENSE_ON_%q<htype>=%#,%i0};@dolist/inline u(MEDEFSTAT,DEFENSE_ON_%q<htype>_%q<atkmode>)={@attach %!/STATUS`[before(%i0,$)]`DEFENSE_ON_%q<htype>_%q<atkmode>=%#,%i0};
 
-&INC`COMBAT`DEFEND`MAIN`CALCULATE`DAMAGE_NET [u(cobj,age)]=@select/inline t(%q<hitmul>)=1,{@dolist/inline INCREASE_DAMAGE DECREASE_DAMAGE INCREASE_DAMAGE_2 DECREASE_DAMAGE_2={@dolist/inline u(ATKERATKSTAT,ATTACK_%i0_NET)={@attach %!/STATUS`[before(%i0,$)]`ATTACK_%i1_NET=%#,%i0};@attach %!/INC`COMBAT`DEFEND`MAIN`CALCULATE`ATTACK_%i0_NET};@dolist/inline INCREASE_DAMAGE DECREASE_DAMAGE INCREASE_DAMAGE_2 DECREASE_DAMAGE_2={@dolist/inline u(MEDEFSTAT,DEFENSE_%i0_NET)={@attach %!/STATUS`[before(%i0,$)]`DEFENSE_%i1_NET=%#,%i0};@attach %!/INC`COMBAT`DEFEND`MAIN`CALCULATE`DEFENSE_%i0_NET}};
+@@ %0 - new damage variable. %1 - input damage variable. %2 - Hook identifier. NET, PREFINAL, FINAL, SPECIAL, etc. %3 - Hook prefix for variables. net, pre, fin, spc, etc.
+&INC`COMBAT`DEFEND`MAIN`CALCULATE`DAMAGE_MOD=th u(setq,%0,r(%1));@select/inline t(%q<hitmul>)=1,{@dolist/inline INCREASE_DAMAGE DECREASE_DAMAGE INCREASE_DAMAGE_2 DECREASE_DAMAGE_2={@dolist/inline u(ATKERATKSTAT,ATTACK_%i0_%2)={@attach %!/STATUS`[before(%i0,$)]`ATTACK_%i1_%2=%#,%i0;@attach %!/INC`COMBAT`DEFEND`MAIN`CALCULATE`DAMAGEMOD_%i1=%0,atk[switch(%i1,INCREASE*,inc,DECREASE*,dec)][switch(%i1,*_2,2)]%3damage}};@dolist/inline INCREASE_DAMAGE DECREASE_DAMAGE INCREASE_DAMAGE_2 DECREASE_DAMAGE_2={@dolist/inline u(MEDEFSTAT,DEFENSE_%i0_%2)={@attach %!/STATUS`[before(%i0,$)]`DEFENSE_%i1_%2=%#,%i0;@attach %!/INC`COMBAT`DEFEND`MAIN`CALCULATE`DAMAGEMOD_%i1=%0,def[switch(%i1,INCREASE*,inc,DECREASE*,dec)][switch(%i1,*_2,2)]%3damage}}};
 
-&INC`COMBAT`DEFEND`MAIN`CALCULATE`DAMAGE_PREFINAL [u(cobj,age)]=@select/inline t(%q<hitmul>)=1,{@dolist/inline INCREASE_DAMAGE DECREASE_DAMAGE INCREASE_DAMAGE_2 DECREASE_DAMAGE_2={@dolist/inline u(ATKERATKSTAT,ATTACK_%i0_PREFINAL)={@attach %!/STATUS`[before(%i0,$)]`ATTACK_%i1_PREFINAL=%#,%i0};@attach %!/INC`COMBAT`DEFEND`MAIN`CALCULATE`ATTACK_%i0_PREFINAL};@dolist/inline INCREASE_DAMAGE DECREASE_DAMAGE INCREASE_DAMAGE_2 DECREASE_DAMAGE_2={@dolist/inline u(MEDEFSTAT,DEFENSE_%i0_PREFINAL)={@attach %!/STATUS`[before(%i0,$)]`DEFENSE_%i1_PREFINAL=%#,%i0};@attach %!/INC`COMBAT`DEFEND`MAIN`CALCULATE`DEFENSE_%i0_PREFINAL}};
+&INC`COMBAT`DEFEND`MAIN`CALCULATE`DAMAGE_NET [u(cobj,age)]=@attach %!/INC`COMBAT`DEFEND`MAIN`CALCULATE`DAMAGE_MOD=damagenet,damageraw,NET,net
 
-&INC`COMBAT`DEFEND`MAIN`CALCULATE`DAMAGE_FINAL [u(cobj,age)]=@select/inline t(%q<hitmul>)=1,{@dolist/inline INCREASE_DAMAGE DECREASE_DAMAGE INCREASE_DAMAGE_2 DECREASE_DAMAGE_2={@dolist/inline u(ATKERATKSTAT,ATTACK_%i0_FINAL)={@attach %!/STATUS`[before(%i0,$)]`ATTACK_%i1_FINAL=%#,%i0};@attach %!/INC`COMBAT`DEFEND`MAIN`CALCULATE`ATTACK_%i0_FINAL};@dolist/inline INCREASE_DAMAGE DECREASE_DAMAGE INCREASE_DAMAGE_2 DECREASE_DAMAGE_2={@dolist/inline u(MEDEFSTAT,DEFENSE_%i0_FINAL)={@attach %!/STATUS`[before(%i0,$)]`DEFENSE_%i1_FINAL=%#,%i0};@attach %!/INC`COMBAT`DEFEND`MAIN`CALCULATE`DEFENSE_%i0_FINAL}};
+&INC`COMBAT`DEFEND`MAIN`CALCULATE`DAMAGE_PREFINAL [u(cobj,age)]=@attach %!/INC`COMBAT`DEFEND`MAIN`CALCULATE`DAMAGE_MOD=damagepre,damagenet,PREFINAL,pre
 
-&INC`COMBAT`DEFEND`MAIN`CALCULATE`DAMAGE_SPECIAL [u(cobj,age)]=@select/inline gt(%q<damage>,0)=1,{@dolist/inline u(ATKERATKSTAT,ATTACK_NEGATE_DAMAGE)={@attach %!/STATUS`[before(%i0,$)]`ATTACK_NEGATE_DAMAGE=%#,%i0}};@select/inline gt(%q<damage>,0)=1,{@dolist/inline u(MEDEFSTAT,DEFENSE_NEGATE_DAMAGE)={@attach %!/STATUS`[before(%i0,$)]`DEFENSE_NEGATE_DAMAGE=%#,%i0}};@dolist/inline u(ATKERATKSTAT,ATTACK_NEGATE_DAMAGE)={@attach %!/STATUS`[before(%i0,$)]`ATTACK_SPECIAL_DAMAGE=%#,%i0};@dolist/inline u(MEDEFSTAT,DEFENSE_SPECIAL_DAMAGE)={@attach %!/STATUS`[before(%i0,$)]`DEFENSE_SPECIAL_DAMAGE=%#,%i0};
+&INC`COMBAT`DEFEND`MAIN`CALCULATE`DAMAGE_FINAL [u(cobj,age)]=@attach %!/INC`COMBAT`DEFEND`MAIN`CALCULATE`DAMAGE_MOD=damagefin,damagepre,FINAL,fin
+
+&INC`COMBAT`DEFEND`MAIN`CALCULATE`DAMAGE_SPECIAL [u(cobj,age)]=@attach %!/INC`COMBAT`DEFEND`MAIN`CALCULATE`DAMAGE_MOD=damagespc,damagefin,SPECIAL,spc
 
 &INC`COMBAT`DEFEND`MAIN`CALCULATE`DAMAGE_POST [u(cobj,age)]=@select/inline gt(%q<damage>,0)=1,{@dolist/inline u(ATKERATKSTAT,ATTACK_POST_DAMAGE)={@attach %!/STATUS`[before(%i0,$)]`ATTACK_POST_DAMAGE=%#,%i0};@dolist/inline u(MEDEFSTAT,DEFENSE_POST_DAMAGE)={@attach %!/STATUS`[before(%i0,$)]`DEFENSE_POST_DAMAGE=%#,%i0}};
 
-&INC`COMBAT`DEFEND`MAIN`CALCULATE`ATTACK_INCREASE_DAMAGE_NET [u(Cobj,age)]=
-&INC`COMBAT`DEFEND`MAIN`CALCULATE`ATTACK_INCREASE_DAMAGE_2_NET [u(Cobj,age)]=th u(setq,damage,mul(%q<damage>,add(1,u(ladd,%q<atkincnetdamagemul>))))
-&INC`COMBAT`DEFEND`MAIN`CALCULATE`ATTACK_DECREASE_DAMAGE_NET [u(Cobj,age)]=
-&INC`COMBAT`DEFEND`MAIN`CALCULATE`ATTACK_DECREASE_DAMAGE_2_NET [u(Cobj,age)]=@select/inline words(%q<atkdecnetdamagemul>)=>0,{th u(setq,damage,mul(%q<damage>,lmath(mul,iter(%q<atkdecnetdamagemul>,u(setr,convatk,sub(1.0,%i0))))))};
+@@ %0 - Damage register to save to. %1 - register to apply.
+&INC`COMBAT`DEFEND`MAIN`CALCULATE`DAMAGEMOD_INCREASE_DAMAGE [u(cobj,age)]=@select/inline words(%1)=>0,{th u(setq,%0,add(r(%0),u(ladd,iter(%1))))}
+&INC`COMBAT`DEFEND`MAIN`CALCULATE`DAMAGEMOD_INCREASE_DAMAGE_2 [u(cobj,age)]=@select/inline words(%1)=>0,{th u(setq,%0,mul(r(%0),add(1,u(ladd,%1))))}
+&INC`COMBAT`DEFEND`MAIN`CALCULATE`DAMAGEMOD_DECREASE_DAMAGE [u(cobj,age)]=@select/inline words(%1)=>0,{th u(setq,%0,sub(r(%0),u(lsub,iter(%1))))}
+&INC`COMBAT`DEFEND`MAIN`CALCULATE`DAMAGEMOD_DECREASE_DAMAGE_2 [u(cobj,age)]=@select/inline words(%1)=>0,{th u(setq,%0,mul(r(%0),lmath(mul,iter(%1,sub(1.0,%i0)))))}
 
-&INC`COMBAT`DEFEND`MAIN`CALCULATE`DEFENSE_INCREASE_DAMAGE_NET [u(Cobj,age)]=
-&INC`COMBAT`DEFEND`MAIN`CALCULATE`DEFENSE_INCREASE_DAMAGE_2_NET [u(Cobj,age)]=th u(setq,damage,mul(%q<damage>,add(1,u(ladd,%q<defincnetdamagemul>))))
-&INC`COMBAT`DEFEND`MAIN`CALCULATE`DEFENSE_DECREASE_DAMAGE_NET [u(Cobj,age)]=
-&INC`COMBAT`DEFEND`MAIN`CALCULATE`DEFENSE_DECREASE_DAMAGE_2_NET [u(Cobj,age)]=@select/inline words(%q<defdecnetdamagemul>)=>0,{th u(setq,damage,mul(%q<damage>,lmath(mul,u(setr,convdef,iter(%q<defdecnetdamagemul>,sub(1.0,%i0))))))};
-
-&INC`COMBAT`DEFEND`MAIN`CALCULATE`ATTACK_INCREASE_DAMAGE_PREFINAL [u(Cobj,age)]=
-&INC`COMBAT`DEFEND`MAIN`CALCULATE`ATTACK_INCREASE_DAMAGE_2_PREFINAL [u(Cobj,age)]=th u(setq,damage,mul(%q<damage>,add(1,u(ladd,%q<atkincpredamagemul>))))
-&INC`COMBAT`DEFEND`MAIN`CALCULATE`ATTACK_DECREASE_DAMAGE_PREFINAL [u(Cobj,age)]=
-&INC`COMBAT`DEFEND`MAIN`CALCULATE`ATTACK_DECREASE_DAMAGE_2_PREFINAL [u(Cobj,age)]=@select/inline words(%q<atkdecpredamagemul>)=>0,{th u(setq,damage,mul(%q<damage>,lmath(mul,iter(%q<atkdecpredamagemul>,u(setr,convatk,sub(1.0,%i0))))))};
-
-&INC`COMBAT`DEFEND`MAIN`CALCULATE`DEFENSE_INCREASE_DAMAGE_FINAL [u(Cobj,age)]=
-&INC`COMBAT`DEFEND`MAIN`CALCULATE`DEFENSE_INCREASE_DAMAGE_2_FINAL [u(Cobj,age)]=th u(setq,damage,mul(%q<damage>,add(1,u(ladd,%q<defincfindamagemul>))))
-&INC`COMBAT`DEFEND`MAIN`CALCULATE`DEFENSE_DECREASE_DAMAGE_FINAL [u(Cobj,age)]=
-&INC`COMBAT`DEFEND`MAIN`CALCULATE`DEFENSE_DECREASE_DAMAGE_2_FINAL [u(Cobj,age)]=@select/inline words(%q<defdecfindamagemul>)=>0,{th u(setq,damage,mul(%q<damage>,lmath(mul,u(setr,convdef,iter(%q<defdecfindamagemul>,sub(1.0,%i0))))))};
-
-&INC`COMBAT`DEFEND`MAIN`CALCULATE`DEFENSE_INCREASE_DAMAGE_FINAL [u(Cobj,age)]=
-&INC`COMBAT`DEFEND`MAIN`CALCULATE`DEFENSE_INCREASE_DAMAGE_2_FINAL [u(Cobj,age)]=th u(setq,damage,mul(%q<damage>,add(1,u(ladd,%q<defincfindamagemul>))))
-&INC`COMBAT`DEFEND`MAIN`CALCULATE`DEFENSE_DECREASE_DAMAGE_FINAL [u(Cobj,age)]=
-&INC`COMBAT`DEFEND`MAIN`CALCULATE`DEFENSE_DECREASE_DAMAGE_2_FINAL [u(Cobj,age)]=@select/inline words(%q<defdecfindamagemul>)=>0,{th u(setq,damage,mul(%q<damage>,lmath(mul,u(setr,convdef,iter(%q<defdecfindamagemul>,sub(1.0,%i0))))))};
+&INC`COMBAT`DEFEND`MAIN`CALCULATE`DAMAGE_CRITICAL [u(cobj,age)]=th u(setq,damagecritatk,%q<damagepre>);@select/inline t(%q<critatk>)=1,{th u(setq,damagecritatk,mul(%q<damagecritatk>,add(1,%q<critatkpower>)));@dolist/inline u(ATKERATKSTAT,ATTACK_AFTER_CRITICAL_ATTACK)={@attach %!/STATUS`[before(%i0,$)]`ATTACK_AFTER_CRITICAL_ATTACK=%#,%i0};@dolist/inline u(MEDEFSTAT,DEFENSE_AFTER_CRITICAL_ATTACK)={@attach %!/STATUS`[before(%i0,$)]`DEFENSE_ON_CRITICAL_ATTACK=%#,%i0}};th u(setq,damagecritdef,%q<damagecritatk>);@select/inline t(%q<critdef>)=1,{th u(setq,damagecritdef,mul(%q<damagecritdef>,sub(1.0,%q<critdefpower>)));@dolist/inline u(MEDEFSTAT,DEFENSE_AFTER_CRITICAL_DEFENSE)={@attach %!/STATUS`[before(%i0,$)]`DEFENSE_AFTER_CRITICAL_DEFENSE=%#,%i0};dolist/inline u(ATKERATKSTAT,ATTACK_AFTER_CRITICAL_DEFENSE)={@attach %!/STATUS`[before(%i0,$)]`ATTACK_AFTER_CRITICAL_DEFENSE=%#,%i0}}
 
 &CALCSTAT`ATK [u(cobj,age)]=add(get(%0/%1`STATS`%2),)
 &CALCSTAT [u(cobj,age)]=add(get(%0/D`COMBAT`STATS`%1),)
@@ -2292,17 +2294,19 @@ Shooter
 
 &INC`COMBAT`DEFEND`MAIN`CALCULATE`NORMALIZE [u(cobj,age)]=@select/inline gt(%q<damage>,0)=1,{th u(setq,damage,u(setr,normdamage,round(add(u(setr,yfac,mul(get(%#/D`COMBAT`HEALTH`ORIGINAL),u(cust,ATTACKS,%q<atklevel>`PERCENTAGE))),fdiv(sub(%q<damage>,%q<yfac>),u(cust,CORE,NORMALIZE))),0)))}
 
+&INC`COMBAT`DEFEND`MAIN`CALCULATE`SCATTER [u(cobj,age)]=th u(setq,scatterblock,max(u(lmax,iter(u(ATKERATKSTAT,DAMAGE_SCATTER`BLOCK_NEGATIVE),u(STATUS`[before(%i0,$)]`DAMAGE_SCATTER`BLOCK_NEGATIVE,%#,%i0))),u(lmax,iter(u(MEDEFSTAT,DAMAGE_SCATTER`BLOCK_NEGATIVE),u(STATUS`[before(%i0,$)]`DAMAGE_SCATTER`BLOCK_NEGATIVE,%#,%i0)))));@dolist/inline posinc~POSITIVE_INCREASE posdec~POSITIVE_DECREASE neginc~NEGATIVE_INCREASE negdec~NEGATIVE_DECREASE={th u(setq,scatter[before(%i0,~)],mul(lmath(mul,iter(u(ATKERATKSTAT,DAMAGE_SCATTER`[after(%i0,~)]),u(STATUS`[before(%i0,$)]`DAMAGE_SCATTER`[after(%i1,~)],%#,%i0))),lmath(mul,iter(u(MEDEFSTAT,DAMAGE_SCATTER`[after(%i0,~)]),u(STATUS`[before(%i0,$)]`DAMAGE_SCATTER`[after(%i1,~)],%#,%i0)))))};
+
 &INC`COMBAT`DEFEND`MAIN`CALCULATE`DAMAGE [u(cobj,age)]=th u(setr,damage,u(setr,preflux,mul(u(cust,CORE,BASEDAMAGE),%q<damagemod>,add(%q<xconorig>,u(ladd,%q<xcon>)),%q<hitmul>)));th u(setq,fudge,add(1.0,u(setr,flux,mul([if(rand(0,1),-,)]1,0.[rjust(rand(0,u(cust,CORE,FUDGESCATTER)),2,0)]))));th u(setr,startdamage,u(setr,damage,floor(mul(add(%q<damage>,%q<adamage>),%q<fudge>))));th u(setq,incdamagemul,1.0)
 
 &INC`COMBAT`DEFEND`MAIN`CALCULATE`DAMAGE`MULTIPLIERS [u(cobj,age)]=
 
-&INC`COMBAT`DEFEND`MAIN`STRIKE [u(cobj,age)]=th u(setq,boss,strmatch(get(%#/D`COMBAT`MODE),BOSS));@attach %!/INC`ANNOUNCE=[ansi(hw,%n)] Lvl %q<rlevel>%q<usex> [ansi(118,get(u(cobj,agedb)/REA`%q<def>`ACTION))] against [ansi(hw,name(%q<atker>))][if(strlen(%q<defname>),%busing %q<defname>)]! [ansi(118,if(%q<hitmul>,if(gte(%q<hitmul>,1.0),A Direct Hit![u(setq,htype,DIRECT)],if(gte(%q<hitmul>,0.7),A Solid Hit![u(setq,htype,SOLID)],A Close Call![u(setq,htype,CLOSE)])),It Missed![u(setq,htype,MISS)]))];@attach %!/INC`ANNOUNCE=[u(u(cobj,agedb)/REA`%q<def>`%q<htype>,%q<atklevel>,ansi(hw,%n),ansi(hw,name(%q<atker>)),ansi(,u(u(cobj,agedb)/ATK`[get(%#/%q<atk>`OFF)]`DESCRIPTION,%q<atklevel>)))]%B[ansi(226,%q<damage>)] [ansi(hw,damage)]![if(%q<dot>,%B[ansi(hr,%q<dot>)] more from Damage over Time!)];@attach %!/INC`DAMAGE=%#,add(%q<damage>,%q<dot>),Normal Combat,,1;@select/inline gte(get(%#/D`COMBAT`DAMAGE),get(%#/D`COMBAT`HEALTH))=1,{@attach %!/INC`ANNOUNCE=[ansi(hr,%n has been defeated!)]};@@ th u(setq,trgbons,iter(0 1 2 3 4 5 6 7,u(calcstatmod,%#,%i0,DEFENSE,%q<def>,1)));
+&INC`COMBAT`DEFEND`MAIN`STRIKE [u(cobj,age)]=th u(setq,boss,strmatch(get(%#/D`COMBAT`MODE),BOSS));@attach %!/INC`ANNOUNCE=[ansi(hw,%n)] Lvl %q<rlevel>%q<usex> [ansi(118,get(u(cobj,agedb)/REA`%q<def>`ACTION))] against [ansi(hw,name(%q<atker>))][if(strlen(%q<defname>),%busing %q<defname>)]! [ansi(118,if(%q<hitmul>,if(gte(%q<hitmul>,1.0),A Direct Hit![u(setq,htype,DIRECT)],if(gte(%q<hitmul>,0.7),A Solid Hit![u(setq,htype,SOLID)],A Close Call![u(setq,htype,CLOSE)])),It Missed![u(setq,htype,MISS)]))];@attach %!/INC`ANNOUNCE=[u(u(cobj,agedb)/REA`%q<def>`%q<htype>,%q<atklevel>,ansi(hw,%n),ansi(hw,name(%q<atker>)),ansi(,u(u(cobj,agedb)/ATK`[get(%#/%q<atk>`OFF)]`DESCRIPTION,%q<atklevel>)))]%B[ansi(226,%q<damage>)] [ansi(hw,damage)]![if(%q<dot>,%B[ansi(hr,%q<dot>)] more from Damage over Time!)];@attach %!/INC`DAMAGE=%#,add(%q<damagespc>,%q<dot>),Normal Combat,,1;@select/inline gte(get(%#/D`COMBAT`DAMAGE),get(%#/D`COMBAT`HEALTH))=1,{@attach %!/INC`ANNOUNCE=[ansi(hr,%n has been defeated!)]};@@ th u(setq,trgbons,iter(0 1 2 3 4 5 6 7,u(calcstatmod,%#,%i0,DEFENSE,%q<def>,1)));
 
 &INC`COMBAT`DEFEND`MAIN`ENDTURN [u(cobj,age)]=&D`COMBAT`HISTORY`LAST_REA_CHOICE %#=%q<def>;th u(addto,%#,D`COMBAT`NUMBERS`TIMES_DEFENDED,1);@attach %!/INC`HEAT=%#,u(setr,heatchange,add(u(cust,REA,%q<def>`COST`%q<rlevel>),u(ladd,iter(u(MEDEFSTAT,STATUS`%q<defstatus>`DEFENSE`HEAT_COST),u(STATUS`[before(%i0,$)]`STATUS`%q<defstatus>`DEFENSE`HEAT_COST,%#,%i0))),u(setr,passiveheat,mul(add(get(%#/D`COMBAT`HEAT`VENT),u(ladd,iter(u(MEDEFSTAT,BONUS`HEAT_VENT),u(getstatus,%#,%i0,DEFENSE,BONUS`HEAT_VENT)))),-1)))),DEFENSE TURN,,add(5,u(ladd,iter(u(MEDEFSTAT,BONUS`HEAT_VENT`EXEMPT),u(getstatus,%#,%i0,DEFENSE,BONUS`HEAT_GAIN`EXEMPT)))),,,1;@attach %!/INC`TENSION=%#,add(mul(%q<deftencost>,-1),u(setr,passivetension,add(get(%#/D`COMBAT`TENSION`GAIN),u(ladd,iter(u(MDEFEFSTAT,DEFENSE`BONUS`TENSION_GAIN),u(getstatus,%#,%i0,DEFENSE,BONUS`TENSION_GAIN)))))),DEFENSE TURN,,,,,1;@attach %!/INC`EANNOUNCE=DEFENSE TURN,ansi(h,%n) [if(strmatch(%q<heatchange>,-*),vented,generated)] [ansi(hg,abs(%q<heatchange>))] Heat and [if(strmatch(%q<passivetension>,-*),lost,gained)] [ansi(hg,%q<passivetension>)] Tension!;th u(attrib_set,%#,D`COMBAT`HISTORY`LAST_SUFFERED_HITMUL,%q<hitmul>);th u(attrib_set,%#,D`COMBAT`HISTORY`LAST_SUFFERED_DAMAGE,%q<damage>);@select/inline t(%q<damage>)=1,{@dolist/inline get(%#/D`COMBAT`ACTIVE`STATUS`TAGS`FIFO_DAMAGE)={@attach %!/STATUS`[before(##,$)]`ON_FIFO_DAMAGE=%#,##,%q<damage>;th u(attrib_set,%#,D`COMBAT`STATUS`##`FIFO_DAMAGE,linsert(get(%#/D`COMBAT`STATUS`##`FIFO_DAMAGE),-1,%q<damage>))}};@dolist/inline u(MEDEFSTAT,DEFENSE_PRE_BONUS)={@attach %!/STATUS`[before(%i0,$)]`DEFENSE_PRE_BONUS=%#,%i0};@dolist/inline u(MEDEFSTAT,DEFENSE_END_TURN)={@attach %!/STATUS`[before(%i0,$)]`DEFENSE_END_TURN=%#,%i0};@dolist/inline u(atkeratkstat,ATTACK_ON_DEFENSE_ENDTURN)={@attach %!/STATUS`[before(%i0,$)]`ATTACK_ON_DEFENSE_ENDTURN=%#,%i0};@attach %!/INC`COMBAT`DEFEND`MAIN`ENDTURN`STATUS=%#;@dolist/inline u(MEDEFSTAT,DEFENSE_FINAL_ENDTURN)={@attach %!/STATUS`[before(%i0,$)]`DEFENSE_FINAL_ENDTURN=%#,%i0};@select/inline u(setr,ftb,cand(not(get(%#/D`COMBAT`NO_FIRST_BONUS)),eq(get(%#/D`COMBAT`NUMBERS`TIMES_DEFENDED),get(%#/D`COMBAT`OPPONENTS)),not(get(%#/D`COMBAT`NUMBERS`TIMES_ATTACKED))))=1,{@@ @attach %!/INC`HEAT=%#,mul(25,get(%#/D`COMBAT`OPPONENTS)),FIRST TURN BONUS,,mul(25,get(%#/D`COMBAT`OPPONENTS)),,1};&D`COMBAT`TENSION`USED %#=0;&D`COMBAT`SELL %#=0;&D`COMBAT`HARDSELL %#=0;@attach %!/WIPE=%#,D`COMBACK
 
 &INC`COMBAT`DEFEND`MAIN`ENDTURN`STATUS [u(cobj,age)]=@dolist/inline/nobreak u(setr,sall,get(%0/D`COMBAT`ACTIVE`STATUS`DEFENSE))={th u(addto,%0,D`COMBAT`STATUS`%i0`INCREMENT,1);@select/inline u(setr,srem,get(%0/D`COMBAT`STATUS`%i0`DEFENSE_TURNS))=X,{},>0,{th u(attrib_set,%0,D`COMBAT`STATUS`%i0`DEFENSE_TURNS,sub(%q<srem>,1));@stop get(%0/D`COMBAT`STATUS`%i0`DEFENSE_TURNS);th u(attrib_set,%0,D`COMBAT`ACTIVE`STATUS`DEFENSE,setdiff(get(%0/D`COMBAT`ACTIVE`STATUS`DEFENSE),%i0));@stop cor(strmatch(get(%0/D`COMBAT`STATUS`%i0`ATTACK_TURNS),X),gt(u(lmax,iter(ATTACK DEFENSE,get(%0/D`COMBAT`STATUS`%i1`%i0_TURNS))),0));@attach %!/KILLSTATUS=%0,%i0}};
 
-&INC`COMBAT`DEFEND`MAIN`DEBUG [u(cobj,age)]=th u(setq,testers,u(filter,TESTER,lplayers(%l)));@pemit/list %q<testers>=u(setr,deboutput,center(Debug: [ansi(hw,%n)] defending against [ansi(hw,name(%q<atker>))],78,ansi(hm,=))%R[align(39 1. 36,Stats: Str Skl Fir Aim Res Agi Arm Mob%RAtker: [iter(0 1 2 3 4 5 6 7,ljust(get(%#/%q<atk>`STATS`%i0`GRADE),3))]%RBonus: [iter(0 1 2 3 4 5 6 7,ljust(sub(r(bastat%i0),r(astat%i0)),3))]%RDfder: [iter(0 1 2 3 4 5 6 7,ljust(get(%#/D`COMBAT`STATS`%i0`GRADE),3))]%RBonus: [iter(0 1 2 3 4 5 6 7,ljust(sub(r(bdstat%i0),r(dstat%i0)),3))],|%R,AccMod: %q<accuracymod> | DmgMod: %q<damagemod>%RBtrack: %q<tmode> | Hitmul: %q<hitmul>%RStatDam: [round(%q<preflux>,2)] | Flux: %q<flux>%RXCON: %q<xconorig> + \([iter(%q<xcon>,%i0,%b,%b+%b)]\)%ROrigDmg: %q<origdamage> | HeatDam: [sub(%q<origdamage>,%q<dnormdamage>)]%RNormDmg: [sub(%q<dnormdamage>,%q<normdamage>)][if(gt(%q<atkopp>,1),%RAttacker [ansi(hr,Boss)] [ansi(hy,%q<atkopp>)]: %q<atkbosspredam> * (%q<atkbossdmgmul> * %q<atkbosssqrt>) = %q<atkbosspostdam>)][if(gt(%q<defopp>,1),%RDefender [ansi(hr,Boss)] [ansi(hy,%q<defopp>)]: %q<defbosspredam> * (%q<defbossdefmul> / %q<defbosssqrt>) = %q<defbosspostdam>)])]%R[center(Lvl %q<atklevel> [u(u(cobj,agedb)/ATK`[get(%#/%q<atk>`OFF)],%q<atklevel>)] Atk VS Lvl %q<rlevel>%q<usex> [u(u(cobj,agedb)/REA`%q<def>,%q<atklevel>)],78,ansi(hm,=))]);@nscemit/noisy ***Combat System***=[ansi(hw,%n)] defending against [ansi(hw,name(%q<atker>))]%R%q<deboutput>;@attach %!/WIPE=%#,%q<atk>;@select/inline nattr(%#/D`COMBAT`Q`*)=0,{@attach %!/INC`CPTREE=%#,D`COMBAT,%#,D`COMBACK}
+&INC`COMBAT`DEFEND`MAIN`DEBUG [u(cobj,age)]=th u(setq,testers,u(filter,TESTER,lplayers(%l)));@pemit/list %q<testers>=u(setr,deboutput,center(Debug: [ansi(hw,%n)] defending against [ansi(hw,name(%q<atker>))],78,ansi(hm,=))%R[align(39 1. 36,Stats: Str Skl Fir Aim Res Agi Arm Mob%RAtker: [iter(0 1 2 3 4 5 6 7,ljust(get(%#/%q<atk>`STATS`%i0`GRADE),3))]%RBonus: [iter(0 1 2 3 4 5 6 7,ljust(sub(r(bastat%i0),r(astat%i0)),3))]%RDfder: [iter(0 1 2 3 4 5 6 7,ljust(get(%#/D`COMBAT`STATS`%i0`GRADE),3))]%RBonus: [iter(0 1 2 3 4 5 6 7,ljust(sub(r(bdstat%i0),r(dstat%i0)),3))]%RCritAtk: %q<critatkdeb> +%q<critatkpower> | CritDef: %q<critdefdeb> +%q<critdefpower>,|%R,AccMod: %q<accuracymod> | DmgMod: %q<damagemod>%RBtrack: %q<tmode> | Hitmul: %q<hitmul>%RStatDam: [round(%q<preflux>,2)] | Flux: %q<flux>%RXCON: %q<xconorig> + \([iter(%q<xcon>,%i0,%b,%b+%b)]\)%ROrigDmg: %q<origdamage> | HeatDam: [sub(%q<origdamage>,%q<dnormdamage>)]%RNormDmg: [sub(%q<dnormdamage>,%q<normdamage>)][if(gt(%q<atkopp>,1),%RAttacker [ansi(hr,Boss)] [ansi(hy,%q<atkopp>)]: %q<atkbosspredam> * (%q<atkbossdmgmul> * %q<atkbosssqrt>) = %q<atkbosspostdam>)][if(gt(%q<defopp>,1),%RDefender [ansi(hr,Boss)] [ansi(hy,%q<defopp>)]: %q<defbosspredam> * (%q<defbossdefmul> / %q<defbosssqrt>) = %q<defbosspostdam>)])]%R[center(Lvl %q<atklevel> [u(u(cobj,agedb)/ATK`[get(%#/%q<atk>`OFF)],%q<atklevel>)] Atk VS Lvl %q<rlevel>%q<usex> [u(u(cobj,agedb)/REA`%q<def>,%q<atklevel>)],78,ansi(hm,=))]);@nscemit/noisy ***Combat System***=[ansi(hw,%n)] defending against [ansi(hw,name(%q<atker>))]%R%q<deboutput>;@attach %!/WIPE=%#,%q<atk>;@select/inline nattr(%#/D`COMBAT`Q`*)=0,{@attach %!/INC`CPTREE=%#,D`COMBAT,%#,D`COMBACK}
 
 &COLORSTAT [u(cobj,age)]=ansi(switch(%0,0,hr,1,hg,2,hy,3,hc,h),%1)
 
